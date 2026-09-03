@@ -40,6 +40,12 @@ export const WARNING_CODES = [
 	'SMALL_PARTS_DROPPED',
 	/** 请求 draco 编码但 draco3dgltf 未安装（可选依赖），已跳过几何压缩 */
 	'DRACO_UNAVAILABLE',
+	/** 输入场景图为空（0 面），convert 产出合法空产物（结构操作不拦截） */
+	'EMPTY_SCENE_OUTPUT',
+	/** 输入扩展名与文件内容不符（如二进制 STL 冒充 .obj），已按扩展名处理但解析结果可疑 */
+	'FORMAT_CONTENT_MISMATCH',
+	/** 输入含未挂载进场景图的孤儿几何（如多 scene GLB 的非默认 scene），已显式挂载防止导出丢失 */
+	'ORPHAN_GEOMETRY_ATTACHED',
 ] as const;
 
 export type WarningCode = (typeof WARNING_CODES)[number];
