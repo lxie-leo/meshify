@@ -1,0 +1,38 @@
+{
+  "name": "@meshify/kernel-ts",
+  "version": "0.1.0",
+  "description": "Meshify Tier0 内核：TS+WASM（gltf-transform + meshoptimizer + earcut + sharp）",
+  "type": "module",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@meshify/core": "workspace:*",
+    "@gltf-transform/core": "^4.1.0",
+    "@gltf-transform/extensions": "^4.1.0",
+    "@gltf-transform/functions": "^4.1.0",
+    "earcut": "^3.0.0",
+    "meshoptimizer": "^0.22.0",
+    "sharp": "^0.33.0"
+  },
+  "optionalDependencies": {
+    "draco3dgltf": "^1.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  },
+  "peerDependencies": {
+    "@meshify/core": "workspace:*"
+  }
+}

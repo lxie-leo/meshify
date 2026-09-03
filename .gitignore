@@ -1,0 +1,24 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.meshify/
+*.meshify/
+coverage/
+.vite-cache/
+*.log
+.DS_Store
+.venv/
+**/__pycache__/
+*.pyc
+*.egg-info/
+build/
+tmp/
+
+# 本地按需生成的大网格样本（node fixtures/generate.mjs --big，~150MB）
+fixtures/glb/huge.glb
+
+# Claude Code 本地目录（.claude/skills/ 为安装器产物，本地重装即可）
+.claude/
+
+# 规划文档仅本地留存，不入库
+docs/

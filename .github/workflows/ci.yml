@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      run_big:
+        description: "运行大网格资源防护测试（>500 万面，慢）"
+        type: boolean
+        default: false
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---- Tier0 基线：3 OS × 3 Node，无 uv —— 一致性/Python 契约样本自动跳过 ----
+  tier0:
+    name: tier0 (${{ matrix.os }}, node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 构建（core → kernel-ts → cli）
+        run: pnpm build
+
+      - name: 类型检查
+        run: pnpm typecheck
+
+      - name: 测试（无 uv：Tier1 用例自动 skip）
+        run: pnpm test
+
+  # ---- Tier1 全链路：uv sync 后一致性/跨语言契约全部生效 ----
+  tier1:
+    name: tier1 (${{ matrix.os }}, node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: packages-py/kernel-py/uv.lock
+
+      # gmsh 官方轮子在 headless Linux 上依赖 libGL（ImportError: libGL.so.1）
+      - name: 安装 Linux 图形库（gmsh 运行时）
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgl1 libglu1-mesa
+
+      - name: 安装 Node 依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 构建
+        run: pnpm build
+
+      - name: uv sync（Python 内核 + gmsh/trimesh）
+        working-directory: packages-py/kernel-py
+        run: uv sync
+
+      - name: gmsh 导入自检（STEP 内核依赖，失败时日志直接给原因）
+        working-directory: packages-py/kernel-py
+        run: uv run python -c "import gmsh; print('gmsh OK', gmsh.__version__)"
+
+      - name: 测试（Tier0 + Tier1 全量）
+        run: pnpm test
+
+      - name: doctor 冒烟（Tier1 就绪自检）
+        run: node packages/cli/bin/meshify.js doctor
+
+  # ---- 大网格资源防护（>500 万面 exit 7；仅手动触发，慢） ----
+  big-mesh:
+    name: big-mesh guard (ubuntu, node 22)
+    if: github.event_name == 'workflow_dispatch' && inputs.run_big
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: 生成 >500 万面 fixture（icosphere 9 ≈ 1310 万面）
+        run: node fixtures/generate.mjs --big
+      - name: 测试（含 exit 7 资源防护用例）
+        run: pnpm test
+        env:
+          MESHIFY_TEST_BIG: "1"

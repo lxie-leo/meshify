@@ -1,0 +1,22 @@
+{
+  "name": "@meshify/core",
+  "version": "0.1.0",
+  "description": "Meshify 契约层：共享类型、manifest schema、报告生成、Tier 仲裁与 Python 桥",
+  "type": "module",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "zod": "^3.23.0"
+  }
+}

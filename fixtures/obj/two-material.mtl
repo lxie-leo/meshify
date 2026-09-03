@@ -1,0 +1,11 @@
+# meshify fixture
+newmtl red_plastic
+Kd 0.8 0.1 0.1
+Ks 0.2 0.2 0.2
+Ns 32
+d 1.0
+newmtl blue_plastic
+Kd 0.1 0.2 0.8
+Ks 0.1 0.1 0.1
+Ns 8
+d 1.0

@@ -1,0 +1,43 @@
+[project]
+name = "meshify-kernel"
+version = "0.1.0"
+description = "meshify Tier1 Python 内核：STEP/CAD (gmsh) + trimesh 几何管线，manifest 契约 meshify.report/v1"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = [
+    # STEP/CAD：gmsh 内置 OpenCASCADE 内核（ pinned：官方轮子偶发回退 API 变动 ）
+    "gmsh==4.15.2",
+    # 几何核心
+    "trimesh>=4.5,<5",
+    "numpy>=1.26",
+    "scipy>=1.12",
+    # QEM 简化（Cython）
+    "pyfqmr>=0.3.1",
+    # semantic 分割
+    "scikit-learn>=1.4",
+    # 贴图处理
+    "Pillow>=10.2",
+    # glb/gltf 结构解析（inspect 输入侧属性/材质/动画以文件声明为准）
+    "pygltflib>=1.16",
+    # earcut 封口（trimesh engine="earcut" 依赖）
+    "mapbox-earcut>=1.0.1",
+    # 连通域/空间索引加速
+    "shapely>=2.0",
+    "rtree>=1.2",
+]
+
+[project.scripts]
+meshify-kernel = "meshify_kernel.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/meshify_kernel"]
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.350",
+]
