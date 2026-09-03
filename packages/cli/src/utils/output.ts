@@ -16,6 +16,17 @@ export interface OutputManagerOptions {
 	explicit?: string;
 }
 
+/**
+ * Windows（NTFS）与 macOS（HFS+/APFS 默认）文件系统大小写不敏感：
+ * `PROOF.glb` 与 `proof.glb` 是同一文件，路径比较必须归一大小写，
+ * 否则「永不覆盖输入」保护可被大小写变体绕过。Linux 保持精确比较。
+ */
+const CASE_INSENSITIVE_FS = process.platform === 'win32' || process.platform === 'darwin';
+
+function samePath(a: string, b: string): boolean {
+	return CASE_INSENSITIVE_FS ? a.toLowerCase() === b.toLowerCase() : a === b;
+}
+
 export class OutputManager {
 	readonly inputPath: string;
 	readonly inputDir: string;
@@ -63,20 +74,22 @@ export class OutputManager {
 	/** 声明即将写入的路径：存在且未 --overwrite → exit 4；等于输入路径 → 永久拒绝。 */
 	claim(target: string): string {
 		const abs = path.resolve(target);
-		if (abs === this.inputPath) {
+		// 大小写不敏感 FS 上 -o PROOF.glb 也能命中输入 proof.glb（samePath 归一比较）
+		if (samePath(abs, this.inputPath)) {
 			throw new MeshifyError(
 				EXIT_PARAM_CONFLICT,
 				`输出路径与输入相同: ${abs}。拒绝覆盖输入文件（--overwrite 也不能覆盖输入）。`,
 			);
 		}
-		if (this.claimed.has(abs)) return abs;
+		const claimKey = CASE_INSENSITIVE_FS ? abs.toLowerCase() : abs;
+		if (this.claimed.has(claimKey)) return abs;
 		if (fs.existsSync(abs) && !this.overwrite) {
 			throw new MeshifyError(
 				EXIT_PARAM_CONFLICT,
 				`输出已存在: ${abs}。默认不覆盖既有产物；确认覆盖请加 --overwrite。`,
 			);
 		}
-		this.claimed.add(abs);
+		this.claimed.add(claimKey);
 		return abs;
 	}
 

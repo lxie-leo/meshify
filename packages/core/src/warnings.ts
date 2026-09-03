@@ -18,6 +18,8 @@ export const WARNING_CODES = [
 	'DOUBLE_SIDED_FORCED',
 	/** 坑 11 相关：纹理被降采样（超过 max-texture-size） */
 	'TEXTURE_DOWNSCALED',
+	/** 非 PNG/JPEG 贴图被规范化转 PNG（glTF 核心规范只内建这两种位图格式） */
+	'TEXTURE_FORMAT_CONVERTED',
 	/** Tier1 不可用，已显式降级到 Tier0 执行 */
 	'TIER_DOWNGRADED',
 	/** 输入含 skin/蒙皮/动画/morph，已自动改走 Tier0 以结构性保留动画 */
@@ -30,6 +32,10 @@ export const WARNING_CODES = [
 	'PARTIAL_SUCCESS',
 	/** OBJ→GLB 时检测到多个等价材质，已自动合并 */
 	'MATERIALS_MERGED',
+	/** --merge 请求的合并因子网格属性不兼容未能执行，已回退逐子网格处理（几何/材质不受影响） */
+	'MERGE_INCOMPATIBLE_FALLBACK',
+	/** OBJ 面引用了不存在的顶点/UV/法线索引，越界分量已按默认值兜底 */
+	'INDEX_OUT_OF_RANGE',
 	/** 连通域分割：面数 < min-parts-faces 的碎片部件被丢弃（全部会被丢时保留最大者） */
 	'SMALL_PARTS_DROPPED',
 	/** 请求 draco 编码但 draco3dgltf 未安装（可选依赖），已跳过几何压缩 */

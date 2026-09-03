@@ -96,10 +96,10 @@ describe('退出码 5：Tier 仲裁（STEP 必须走 Tier1）', () => {
 });
 
 describe('退出码 6：算法失败', () => {
-	it('空几何输入 + plane 模式 → 无法确定切割平面', () => {
+	it('空几何输入 + plane 模式 → 统一守卫拦截（不依赖内核侧消息）', () => {
 		const r = cli(['segment', FIX('glb/empty.glb'), '--mode', 'plane', '--axis', 'x', '--json']);
 		expect(r.code).toBe(6);
-		expect(r.stderr).toMatch(/无几何/);
+		expect(r.stderr).toMatch(/三角面|几何/);
 	});
 });
 

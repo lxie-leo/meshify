@@ -7,12 +7,13 @@ meshify convert <input> --to <glb|gltf|obj|stl|ply>
 ```
 
 `--to` 默认 `glb`（单文件最通用）。同格式转换被拒（exit 4）——重新编码请先转中间格式。
+`-o` 显式输出路径的扩展名必须与 `--to` 一致（否则 exit 4，防 STL 字节落进 .glb 名的坏产物）。
 
 ## 路线
 
 - **Tier0**（glb/gltf/obj/stl/ply 输入）：读入重建为 glTF Document 后导出
   - OBJ 读入：自动找同名 `.mtl` 与引用贴图，材质转 PBR
-  - glTF 输出：buffer/贴图全部 data URI 内嵌，单文件自包含
+  - glTF 输出：外部 `.bin` 与贴图伴生落盘在产物同目录（manifest.files 逐个列出，搬运时一并带走）
   - OBJ 输出：主文件 + `.mtl` + 伴生贴图（manifest.files 逐个列出）
 - **Tier1**（step/stp 输入，或 `--tier py`）：STEP 经 OCC 网格化 → 颜色分组 → 目标格式
   （细节见 cad-step.md）

@@ -17,7 +17,7 @@ let ioPromise: Promise<NodeIO> | null = null;
 
 export async function createIO(): Promise<NodeIO> {
 	if (!ioPromise) {
-		ioPromise = (async () => {
+		const init = (async () => {
 			await MeshoptDecoder.ready;
 			await MeshoptEncoder.ready;
 			const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
@@ -38,6 +38,11 @@ export async function createIO(): Promise<NodeIO> {
 			}
 			return io;
 		})();
+		// 初始化失败不缓存 rejected promise：下次调用重新初始化（否则一次瞬态失败永久驻留）
+		init.catch(() => {
+			if (ioPromise === init) ioPromise = null;
+		});
+		ioPromise = init;
 	}
 	return ioPromise;
 }

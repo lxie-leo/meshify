@@ -229,11 +229,17 @@ def _gltf_input_info(path: str) -> Dict[str, Any]:
 
 
 def _mesh_input_info(path: str) -> Dict[str, Any]:
-    """obj/stl/ply 统计（trimesh；--tier py 显式路径）。"""
+    """obj/stl/ply 统计（trimesh；--tier py 显式路径）。
+
+    走 mesh_utils.load_scene：空 OBJ → 空场景（统一空场景语义），
+    解析失败 → input_unreadable（exit 2，不落内部错误）。
+    """
     import numpy as np
     import trimesh
 
-    scene = trimesh.load(path, force="scene", process=False)
+    from . import mesh_utils as mu
+
+    scene = mu.load_scene(path)
     geos = {
         name: g
         for name, g in getattr(scene, "geometry", {}).items()

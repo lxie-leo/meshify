@@ -48,7 +48,8 @@ describe('simplify 质量（dense.glb 5120 面水密球）', () => {
 		expect(r.facesBefore).toBe(5120);
 		expect(r.facesAfter).toBeGreaterThan(5120 * 0.2);
 		expect(r.facesAfter).toBeLessThan(5120 * 0.3);
-		expect(r.warnings).toEqual([]); // 无静默降级
+		// dense.glb 材质+贴图+UV 齐备（fixtures 已修材质绑定）：贴图网格简化必须披露近似重投影（坑 2），此外不得有其他降级
+		expect(r.warnings.map((w) => w.code)).toEqual(['UV_REMAP_APPROXIMATED']);
 		const out = path.join(freshDir('quality-simplify'), 's.glb');
 		await writeDocument(doc, out);
 		const m = await readTriMesh(out);
@@ -134,7 +135,8 @@ describe('texture 质量', () => {
 	it('box 投影后全顶点有 UV 且在 [0,1]', async () => {
 		const doc = await readDocument(DENSE);
 		const r = await textureDocument(doc, { mode: 'box' });
-		expect(r.warnings).toEqual([]);
+		// 已有贴图的子网格被重投影：显式披露（坑 2），无其他警告
+		expect(r.warnings.map((w) => w.code)).toEqual(['UV_REMAP_APPROXIMATED']);
 		const prim = doc.getRoot().listMeshes()[0].listPrimitives()[0];
 		const uv = prim.getAttribute('TEXCOORD_0').getArray() as Float32Array;
 		expect(uv.length).toBe((prim.getAttribute('POSITION').getArray().length / 3) * 2);

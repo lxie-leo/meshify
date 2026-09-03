@@ -94,7 +94,7 @@ meshify convert part.step --to glb
 | 码 | 含义 |
 |---|---|
 | 0 | 成功（可含非致命警告，读 `warnings[]`） |
-| 2 | 输入不可读（路径/权限） |
+| 2 | 输入不可读（路径/权限/解析失败——截断、损坏、垃圾内容均归此码） |
 | 3 | 格式不支持（FBX 等先经 DCC 导出） |
 | 4 | 参数冲突 / 拒绝覆盖（覆盖需显式 `--overwrite`；输出 == 输入一律拒绝） |
 | 5 | Tier1 执行器不可用（stderr 附安装指引） |
@@ -104,7 +104,7 @@ meshify convert part.step --to glb
 
 预加载失败（2/3/4/5）直接在 stderr 输出诊断信息和退出码，不伪造 manifest；用法错误统一收敛进 4。
 
-**manifest**：每条命令在 `<输入名>.meshify/` 写 `<输入名>.<op>.report.json`，`--json` 时同一内容进 stdout。`metrics.face_reduction / byte_reduction` 看效果，`warnings[].code` 看降级（16 个警告码全表与字段级文档见 [report-schema.md](skills/meshify/references/report-schema.md) 与 [troubleshooting.md](skills/meshify/references/troubleshooting.md)）。
+**manifest**：每条命令在 `<输入名>.meshify/` 写 `<输入名>.<op>.report.json`，`--json` 时同一内容进 stdout。`metrics.face_reduction / byte_reduction` 看效果，`warnings[].code` 看降级（19 个警告码全表与字段级文档见 [report-schema.md](skills/meshify/references/report-schema.md) 与 [troubleshooting.md](skills/meshify/references/troubleshooting.md)）。
 
 ## ⚙️ 双层内核（Tiering）
 
@@ -163,7 +163,7 @@ fixtures               黄金样本生成器 + 提交的生成物（多材质/�
 
 - [SKILL.md](skills/meshify/SKILL.md) — Skill 用法总览与决策树
 - [references/](skills/meshify/references/) — 各命令细节、报告 schema、Tier 仲裁、排障
-- [report-schema.md](skills/meshify/references/report-schema.md) — `meshify.report/v1` 字段级文档与 16 个警告码
+- [report-schema.md](skills/meshify/references/report-schema.md) — `meshify.report/v1` 字段级文档与 19 个警告码
 
 ## 🤝 贡献
 

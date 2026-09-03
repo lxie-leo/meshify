@@ -62,6 +62,11 @@ def run_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
         try:
             input_info = build_input_info(input_path, params)
 
+            # 几何命令空输入统一拦截（inspect/convert 是结构操作，不拦）：
+            # 与 Tier0 侧行为对齐——0 面 = exit 6，且在任何产物写盘前失败
+            if command in {"simplify", "segment", "texture", "lod", "optimize"} and input_info.get("faces", 0) == 0:
+                raise KernelError(EXIT_ALGORITHM_FAILED, "输入不含任何三角面，几何命令无可处理几何")
+
             # 输出目录兜底创建（CLI 会预建；直接 payload 调用时同样成立）
             if output_path:
                 os.makedirs(os.path.dirname(os.path.abspath(output_path)) or ".", exist_ok=True)
@@ -237,21 +242,24 @@ def _cmd_texture(input_path, params, output_path, output_dir, overwrite):
         raise KernelError(EXIT_PARAM_CONFLICT, "texture 需要 payload.output")
     from .services import texture as svc
 
+    # --image 可选（与 Tier0 契约一致：无贴图时仅重生成 UV）
     image = params.get("image")
-    if image is None:
-        raise KernelError(EXIT_PARAM_CONFLICT, "texture 需要 params.image（--image 贴图路径）")
     result = svc.texture_file(
         input_path,
         output_path,
         map_mode=str(params.get("map", "box")),
-        image_path=str(image),
+        image_path=str(image) if image is not None else None,
         metallic=params.get("metallic"),
         roughness=params.get("roughness"),
         overwrite=overwrite,
     )
     files = [_file_info(output_path, "asset")]
     output = _single_output(output_path, "glb", result["vertices"], result["faces"], files)
-    return {"output": output, "warnings": result.get("warnings", [])}
+    return {
+        "output": output,
+        "warnings": result.get("warnings", []),
+        "tier_note": "Tier1 texture：合并网格重投影（无 --image 时仅重生成 UV，材质统一为默认 PBR）",
+    }
 
 
 def _cmd_convert(input_path, params, output_path, output_dir, overwrite):

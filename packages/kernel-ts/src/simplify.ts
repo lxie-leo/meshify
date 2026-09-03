@@ -216,6 +216,7 @@ function mergeByMaterial(doc: Document, infos: PrimitiveInfo[], warnings: Report
 	const scene = doc.getRoot().listScenes()[0];
 	if (!scene) return;
 	let mergedAny = false;
+	let fallbackGroups = 0;
 	for (const [, list] of groups) {
 		if (list.length < 2) continue;
 		try {
@@ -237,10 +238,19 @@ function mergeByMaterial(doc: Document, infos: PrimitiveInfo[], warnings: Report
 			mergedAny = true;
 		} catch {
 			// 合并失败（属性不兼容等）：保留逐子网格处理
+			fallbackGroups += 1;
 		}
 	}
 	if (mergedAny) {
 		warnings.push(warn('MATERIALS_MERGED', '--merge 模式：同材质子网格已合并处理（材质保持不丢）'));
+	}
+	if (fallbackGroups > 0) {
+		warnings.push(
+			warn(
+				'MERGE_INCOMPATIBLE_FALLBACK',
+				`--merge：${fallbackGroups} 组同材质子网格因顶点属性不兼容无法合并，已回退逐子网格处理（几何与材质不受影响）`,
+			),
+		);
 	}
 }
 

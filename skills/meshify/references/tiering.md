@@ -17,7 +17,7 @@
 2. **STEP 输入 → 强制 Tier1**
    Tier0 无解析能力。Tier1 未就绪 → exit 5 + 安装指引。**没有降级路径，这是能力边界不是故障。**
 3. 其余命令默认 Tier0；`--tier py` 显式要求走 Tier1（不可用则 exit 5）。
-4. 环境探测缓存 24h（`~/.meshify/tier-env.json`）；`meshify doctor --refresh` 强制重探。
+4. 环境探测缓存 24h（`~/.meshify/tier-env.json`）；`meshify doctor` 每次都现场重探测并刷新该缓存。
 
 ## manifest 里的痕迹
 

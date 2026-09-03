@@ -46,7 +46,7 @@ function chunk(type, data) {
 
 /** size×size 棋盘格 + 对角渐变 PNG（贴图样本；近白亮度供预览曝光逻辑测试）。 */
 function checkerPng(size = 64) {
-	const raw = Buffer.alloc((size * 3 + 1) * size);
+	const raw = Buffer.alloc((size * 4 + 1) * size); // RGBA：filter 字节 + size*4
 	let o = 0;
 	for (let y = 0; y < size; y++) {
 		raw[o++] = 0; // filter none
@@ -181,6 +181,7 @@ function addPrimitive(doc, name, geom, material, translation) {
 	prim.setAttribute('NORMAL', acc(doc, 'VEC3', geom.normals));
 	if (geom.uvs) prim.setAttribute('TEXCOORD_0', acc(doc, 'VEC2', geom.uvs));
 	prim.setIndices(acc(doc, 'SCALAR', geom.indices));
+	if (material) prim.setMaterial(material); // 材质必须挂到 primitive：孤儿材质测不到坑 1/坑 2 路径
 	const mesh = doc.createMesh(name).addPrimitive(prim);
 	const node = doc.createNode(name).setMesh(mesh).setTranslation(translation ?? [0, 0, 0]);
 	doc.createScene('Scene').addChild(node);

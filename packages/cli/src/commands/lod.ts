@@ -3,6 +3,7 @@ import type { Command } from 'commander';
 import type { LodLevelSummary } from '@meshify/core';
 import {
 	addCommonOptions,
+	assertProcessableGeometry,
 	documentStats,
 	documentToGlbBytes,
 	emitReport,
@@ -57,6 +58,7 @@ export function registerLod(program: Command): void {
 		progress('读取输入…');
 		const loaded = await loadInput(input, format);
 		assertResourceLimits(loaded.bytes, loaded.inputInfo.faces, { force: !!opts.force });
+		assertProcessableGeometry(loaded.inputInfo, 'lod');
 		const beforeBytes = opts.previewHtml ? await documentToGlbBytes(loaded.doc) : null;
 
 		progress(`生成 LOD 链（${levels} 级）…`);

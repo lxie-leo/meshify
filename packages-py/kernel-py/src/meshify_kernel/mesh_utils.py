@@ -12,12 +12,52 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
+from .errors import input_unreadable
+
+STEP_EXTS = {".step", ".stp"}
+
+
+def _is_step(file_path: str) -> bool:
+    return Path(file_path).suffix.lower() in STEP_EXTS
+
+
+def _is_empty_obj(file_path: str) -> bool:
+    """OBJ 文本中没有任何 v 行 → 合法空网格（与 Tier0 空 OBJ 同口径，
+    交给上层"空场景"处理，而不是让 trimesh 抛错归为输入不可读）。"""
+    if Path(file_path).suffix.lower() != ".obj":
+        return False
+    try:
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as fh:
+            for line in fh:
+                if line.startswith("v ") or line.startswith("v\t"):
+                    return False
+    except OSError:
+        return False
+    return True
+
 
 def load_scene(file_path: str):
-    """加载网格为 trimesh.Scene（保留多子网格结构与各自材质）。"""
+    """加载网格为 trimesh.Scene（保留多子网格结构与各自材质）。
+
+    STEP/STP 走 gmsh 网格化 + 颜色分组（与 inspect/convert 同路线）：
+    trimesh 自带的 STEP 后端需要 cascadio（未声明依赖），不走。
+    """
+    if _is_step(file_path):
+        from .services import step as step_svc
+
+        groups, _bbox = step_svc.mesh_step_groups(file_path)
+        if not groups:
+            raise ValueError("STEP 文件未生成任何三角面，可能不包含实体几何或文件已损坏")
+        return step_svc.groups_to_scene(groups)
+
     import trimesh
 
-    return trimesh.load(file_path, force="scene", process=False)
+    if _is_empty_obj(file_path):
+        return trimesh.Scene()
+    try:
+        return trimesh.load(file_path, force="scene", process=False)
+    except Exception as e:
+        raise input_unreadable(f"输入解析失败（{Path(file_path).name}）: {e}") from e
 
 
 def load_scene_meshes(file_path: str):
@@ -37,7 +77,30 @@ def load_mesh_merged(file_path: str):
     """加载为单一 Trimesh（烘焙节点变换后合并；贴图/UV 重投影用）。"""
     import trimesh
 
-    mesh = trimesh.load(file_path, force="mesh", process=False)
+    if _is_step(file_path):
+        # STEP：gmsh 分组网格拼接为单一 Trimesh（后续统一重投影 UV，材质重置）
+        from .services import step as step_svc
+
+        groups, _bbox = step_svc.mesh_step_groups(file_path)
+        if not groups:
+            raise ValueError("STEP 文件未生成任何三角面，可能不包含实体几何或文件已损坏")
+        verts = [v for _, v, _f in groups]
+        faces = []
+        offset = 0
+        for _, v, f in groups:
+            faces.append(np.asarray(f, dtype=np.int64) + offset)
+            offset += len(v)
+        mesh = trimesh.Trimesh(vertices=np.vstack(verts), faces=np.vstack(faces), process=False)
+        if len(mesh.vertices) == 0:
+            raise ValueError("模型中不包含任何几何体")
+        return mesh
+
+    if _is_empty_obj(file_path):
+        return trimesh.Trimesh()
+    try:
+        mesh = trimesh.load(file_path, force="mesh", process=False)
+    except Exception as e:
+        raise input_unreadable(f"输入解析失败（{Path(file_path).name}）: {e}") from e
     if not isinstance(mesh, trimesh.Trimesh) or len(mesh.vertices) == 0:
         raise ValueError("模型中不包含任何几何体")
     return mesh

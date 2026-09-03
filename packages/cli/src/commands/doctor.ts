@@ -18,7 +18,6 @@ export function registerDoctor(program: Command): void {
 		.description('环境自检：Node / Tier0 (WASM) / Tier1 (uv + kernel-py) / 磁盘；结果缓存 24h 供 tier 仲裁复用')
 		.option('--json', 'stdout 输出 JSON')
 		.option('--install-uv', '引导安装 uv（单文件安装器；Windows 用 PowerShell 脚本，其余 curl|sh）')
-		.option('--refresh', '忽略缓存强制重新探测')
 		.action(async (cmdOpts: Record<string, unknown>) => {
 			const json = !!cmdOpts.json;
 
@@ -51,7 +50,8 @@ export function registerDoctor(program: Command): void {
 
 async function runDoctor() {
 	const nodeVersion = process.version;
-	const nodeOk = /^v(1[89]|2[0-9])\./.test(nodeVersion) && satisfiesMin(nodeVersion, 18, 17);
+	// 版本判定交给数值比较（satisfiesMin 已覆盖 30+ 等未来主版本），不再用枚举式正则
+	const nodeOk = satisfiesMin(nodeVersion, 18, 17);
 
 	const t0 = await tier0SelfCheck();
 	const tier0Ok = nodeOk && t0.meshoptWasm && t0.sharp && t0.earcut;

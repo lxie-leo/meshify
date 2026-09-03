@@ -2,6 +2,7 @@ import type { Command } from 'commander';
 import { MeshifyError, EXIT_PARAM_CONFLICT } from '@meshify/core';
 import {
 	addCommonOptions,
+	assertProcessableGeometry,
 	documentStats,
 	documentToGlbBytes,
 	emitReport,
@@ -74,6 +75,7 @@ export function registerOptimize(program: Command): void {
 		progress('读取输入…');
 		const loaded = await loadInput(input, format);
 		assertResourceLimits(loaded.bytes, loaded.inputInfo.faces, { force: !!opts.force });
+		assertProcessableGeometry(loaded.inputInfo, 'optimize');
 		const beforeBytes = opts.previewHtml ? await documentToGlbBytes(loaded.doc) : null;
 
 		progress('优化管线执行中…');

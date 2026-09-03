@@ -73,7 +73,8 @@ def _guard_overwrite(out_path: str, overwrite: bool, input_path: str) -> None:
     """CLI 只预声明 part_000；后续部件由本侧强制同一覆盖约定。"""
     import os
 
-    if os.path.abspath(out_path) == os.path.abspath(input_path):
+    # normcase：Windows 大小写不敏感文件系统上 PROOF.glb == proof.glb
+    if os.path.normcase(os.path.abspath(out_path)) == os.path.normcase(os.path.abspath(input_path)):
         raise ValueError(f"输出路径与输入相同: {out_path}")
     if os.path.exists(out_path) and not overwrite:
         raise FileExistsError(f"输出已存在: {out_path}（默认不覆盖；确认覆盖请加 --overwrite）")
@@ -90,7 +91,8 @@ def _load_solids(file_path: str):
     from scipy.sparse.csgraph import connected_components
     from trimesh.visual.color import ColorVisuals
 
-    scene = trimesh.load(file_path, force="scene", process=False)
+    # 统一经 mesh_utils.load_scene：STEP 走 gmsh 路线 + 解析失败归类 exit 2
+    scene = mu.load_scene(file_path)
     geos = [
         g
         for g in getattr(scene, "geometry", {}).values()

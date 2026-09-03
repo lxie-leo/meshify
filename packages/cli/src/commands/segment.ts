@@ -3,6 +3,7 @@ import type { Document } from '@gltf-transform/core';
 import { MeshifyError, EXIT_ALGORITHM_FAILED, EXIT_PARAM_CONFLICT } from '@meshify/core';
 import {
 	addCommonOptions,
+	assertProcessableGeometry,
 	documentStats,
 	documentToGlbBytes,
 	emitReport,
@@ -100,6 +101,7 @@ export function registerSegment(program: Command): void {
 		progress('读取输入…');
 		const loaded = await loadInput(input, format);
 		assertResourceLimits(loaded.bytes, loaded.inputInfo.faces, { force: !!opts.force });
+		assertProcessableGeometry(loaded.inputInfo, 'segment');
 		// 预览 before 快照需在内核改动 Document 之前捕获
 		const beforeBytes = opts.previewHtml ? await documentToGlbBytes(loaded.doc) : null;
 

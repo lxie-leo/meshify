@@ -26,6 +26,10 @@ def lod_file(
         raise param_conflict(f"--levels 需在 2..16，收到: {levels}")
 
     import os
+    import shutil
+
+    from .. import mesh_utils as mu
+    from . import step as step_svc  # 复用 scene_totals
 
     stage_input = input_path
     level_files: List[Dict[str, Any]] = []
@@ -33,17 +37,23 @@ def lod_file(
     total_f = 0
     warnings: List[Dict[str, Any]] = []
 
-    # 层级 0：原始模型直接落盘（LOD 链起点，meshopt LOD 语义）
+    # 层级 0：原始模型直接落盘（LOD 链起点，meshopt LOD 语义）。
+    # 先验加载：空场景/坏输入在写盘前失败，不留半截产物。
+    scene = _load_any(input_path)
+    v, f = step_svc.scene_totals(scene)
+    if f == 0:
+        raise ValueError("输入不含任何三角面，无法生成 LOD 链")
+
     out0 = str(Path(output_dir) / "part_000.glb")
     if os.path.exists(out0) and not overwrite:
         raise param_conflict(f"输出已存在: {out0}（默认不覆盖；确认覆盖请加 --overwrite）")
-    import shutil
 
-    shutil.copyfile(input_path, out0)
-    from . import step as step_svc  # 复用 scene_totals
-
-    scene = _load_any(out0)
-    v, f = step_svc.scene_totals(scene)
+    if Path(input_path).suffix.lower() in {".step", ".stp"}:
+        # STEP 不能字节直拷（part_000.glb 会是 .step 改名的坏 GLB）：
+        # 经 gmsh 网格化落成合法 GLB，后续层级基于它级联简化
+        mu.save_mesh(scene, out0, file_type="glb")
+    else:
+        shutil.copyfile(input_path, out0)
     level_files.append({"level": 0, "path": out0, "vertices": v, "faces": f, "ratio": 1.0})
     total_v += v
     total_f += f

@@ -15,6 +15,7 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 
 from .. import mesh_utils as mu
+from ..errors import input_unreadable
 
 DEFAULT_RGBA = (200, 200, 200, 255)
 
@@ -33,8 +34,12 @@ def mesh_step_groups(step_path: str, resolution: int = 100) -> Tuple[List[Tuple[
     try:
         gmsh.option.setNumber("General.Terminal", 0)
         gmsh.option.setNumber("General.Verbosity", 2)
-        gmsh.merge(step_path)
-        gmsh.model.occ.synchronize()
+        try:
+            gmsh.merge(step_path)
+            gmsh.model.occ.synchronize()
+        except Exception as e:
+            # 读不进来 = 输入不可读（截断/伪 STEP），不是算法失败
+            raise input_unreadable(f"STEP 解析失败（{step_path}）: {e}") from e
 
         xmin, ymin, zmin, xmax, ymax, zmax = gmsh.model.getBoundingBox(-1, -1)
         bbox = [[float(xmin), float(ymin), float(zmin)], [float(xmax), float(ymax), float(zmax)]]

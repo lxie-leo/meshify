@@ -4,6 +4,7 @@ import type { Command } from 'commander';
 import type { Document } from '@gltf-transform/core';
 import {
 	MeshifyError,
+	EXIT_ALGORITHM_FAILED,
 	EXIT_INPUT_UNREADABLE,
 	EXIT_INTERNAL,
 	EXIT_PARAM_CONFLICT,
@@ -50,31 +51,43 @@ export async function loadInput(inputPath: string, format: InputFormat): Promise
 	const warnings: ReportWarning[] = [];
 	let doc: Document;
 
-	switch (format) {
-		case 'glb':
-		case 'gltf':
-			doc = await readDocument(inputPath);
-			break;
-		case 'obj': {
-			const text = readText(inputPath);
-			const { mtl, mtlWarnings } = loadSiblingMtl(inputPath);
-			const images = loadMtlImages(mtl, path.dirname(inputPath));
-			doc = objToDocument(text, mtl, images).doc;
-			warnings.push(...mtlWarnings);
-			break;
+	// 解析/解码失败 = 输入不可读（exit 2），不是内部错误：
+	// 截断 GLB、垃圾 OBJ、空 PLY、引用缺失 .bin 的 .gltf 都归此类（与 Tier1 口径一致）
+	try {
+		switch (format) {
+			case 'glb':
+			case 'gltf':
+				doc = await readDocument(inputPath);
+				break;
+			case 'obj': {
+				const text = readText(inputPath);
+				const { mtl, mtlWarnings } = loadSiblingMtl(inputPath);
+				const images = loadMtlImages(mtl, path.dirname(inputPath));
+				const obj = objToDocument(text, mtl, images);
+				doc = obj.doc;
+				warnings.push(...obj.warnings); // 越界索引 / 材质合并等披露不能在加载层丢弃
+				warnings.push(...mtlWarnings);
+				break;
+			}
+			case 'stl':
+				doc = stlToDocument(new Uint8Array(fs.readFileSync(inputPath)), path.basename(inputPath, '.stl'));
+				break;
+			case 'ply':
+				doc = plyToDocument(new Uint8Array(fs.readFileSync(inputPath)), path.basename(inputPath, '.ply'));
+				break;
+			case 'step':
+				// STEP 只能经 Tier1（convert 命令在 tier 仲裁处已分流，此处不可达）
+				throw new MeshifyError(
+					EXIT_INTERNAL,
+					'STEP 输入必须经 Tier1 (Python/gmsh) 处理，Tier0 加载路径不可达。',
+				);
 		}
-		case 'stl':
-			doc = stlToDocument(new Uint8Array(fs.readFileSync(inputPath)), path.basename(inputPath, '.stl'));
-			break;
-		case 'ply':
-			doc = plyToDocument(new Uint8Array(fs.readFileSync(inputPath)), path.basename(inputPath, '.ply'));
-			break;
-		case 'step':
-			// STEP 只能经 Tier1（convert 命令在 tier 仲裁处已分流，此处不可达）
-			throw new MeshifyError(
-				EXIT_INTERNAL,
-				'STEP 输入必须经 Tier1 (Python/gmsh) 处理，Tier0 加载路径不可达。',
-			);
+	} catch (err) {
+		if (err instanceof MeshifyError) throw err;
+		throw new MeshifyError(
+			EXIT_INPUT_UNREADABLE,
+			`输入解析失败（${path.basename(inputPath)}，格式 ${format}）: ${err instanceof Error ? err.message : String(err)}`,
+		);
 	}
 
 	const inspected = await inspectDocument(doc);
@@ -85,6 +98,19 @@ export async function loadInput(inputPath: string, format: InputFormat): Promise
 		inputInfo: toInputInfo(inputPath, format, bytes, inspected),
 		warnings,
 	};
+}
+
+/**
+ * 几何命令（simplify/segment/texture/lod/optimize）前置：
+ * 输入 0 面 → exit 6，任何产物写盘前失败（inspect/convert 是结构操作，不拦；
+ * 与 Tier1 runner 的集中拦截同口径）。
+ */
+export function assertProcessableGeometry(inputInfo: InputInfo, command: string): void {
+	if (inputInfo.faces > 0) return;
+	throw new MeshifyError(
+		EXIT_ALGORITHM_FAILED,
+		`输入不含任何三角面，${command} 无可处理几何。可先 inspect 查看文件结构；空场景请检查导出设置。`,
+	);
 }
 
 function readText(p: string): string {

@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { Command } from 'commander';
-import { MeshifyError, EXIT_PARAM_CONFLICT } from '@meshify/core';
+import { MeshifyError, EXIT_INTERNAL, EXIT_PARAM_CONFLICT } from '@meshify/core';
 import {
 	addCommonOptions,
 	documentStats,
@@ -50,6 +50,16 @@ export function registerConvert(program: Command): void {
 				`输入已是 ${to} 格式（${input}）。转换到同格式无意义；如需重新编码请先转中间格式。`,
 			);
 		}
+		// -o 扩展名必须与 --to 一致：不一致会把 STL 字节写进 .glb 名文件（坏产物留盘）
+		if (opts.output !== undefined) {
+			const outExt = path.extname(String(opts.output)).toLowerCase().replace('.', '');
+			if (outExt !== to) {
+				throw new MeshifyError(
+					EXIT_PARAM_CONFLICT,
+					`-o 输出扩展名 .${outExt || '(无)'} 与 --to ${to} 不一致，产物应是 .${to} 文件。请修正 -o 路径或去掉 -o 用默认命名。`,
+				);
+			}
+		}
 		const params: Record<string, unknown> = { to };
 
 		const op = `converted-${to}`;
@@ -66,9 +76,26 @@ export function registerConvert(program: Command): void {
 		om.ensureDirFor(outPath);
 
 		const files: ReturnType<typeof fileEntryOf>[] = [];
+		const companionFiles: string[] = []; // 伴生资源（.bin/贴图/.mtl）——manifest files[] 必须齐备，Agent 按它拷产物
 		progress(`转换 → ${to}…`);
 		if (to === 'glb' || to === 'gltf') {
 			await writeDocument(loaded.doc, outPath);
+			if (to === 'gltf') {
+				// 解析产物 JSON，收集外部 buffer/贴图 URI（gltf-transform 写 .gltf 时按需外置）
+				const written = JSON.parse(fs.readFileSync(outPath, 'utf-8')) as {
+					buffers?: { uri?: string }[];
+					images?: { uri?: string }[];
+				};
+				const uris = [
+					...(written.buffers ?? []).map((b) => b.uri),
+					...(written.images ?? []).map((i) => i.uri),
+				];
+				for (const uri of uris) {
+					if (!uri || uri.startsWith('data:')) continue;
+					const p = path.resolve(path.dirname(outPath), decodeURIComponent(uri));
+					if (fs.existsSync(p)) companionFiles.push(p);
+				}
+			}
 		} else if (to === 'stl') {
 			fs.writeFileSync(outPath, documentToStl(loaded.doc));
 		} else if (to === 'ply') {
@@ -80,18 +107,29 @@ export function registerConvert(program: Command): void {
 			if (exported.mtl) fs.writeFileSync(path.join(path.dirname(outPath), path.basename(outPath, '.obj') + '.mtl'), exported.mtl, 'utf-8');
 			for (const img of exported.images) {
 				fs.writeFileSync(path.join(path.dirname(outPath), img.name), img.bytes);
+				companionFiles.push(path.join(path.dirname(outPath), img.name));
 			}
 		}
 		progressDone(`转换完成 → ${outPath}`);
 
 		// 输出统计：obj/stl/ply 读回后统计（转换保真，指标以实际产物为准）
-		const afterFormat = sniffInputFormat(outPath);
-		const afterLoaded = await loadInput(outPath, afterFormat);
+		let afterLoaded: Awaited<ReturnType<typeof loadInput>>;
+		try {
+			afterLoaded = await loadInput(outPath, sniffInputFormat(outPath));
+		} catch (err) {
+			throw new MeshifyError(
+				EXIT_INTERNAL,
+				`转换产物读回失败（${outPath}）: ${err instanceof Error ? err.message : String(err)}`,
+			);
+		}
 		const stats = { vertices: afterLoaded.inputInfo.vertices, faces: afterLoaded.inputInfo.faces };
 		files.push(fileEntryOf(outPath, 'asset'));
 		if (to === 'obj') {
 			const mtl = path.join(path.dirname(outPath), path.basename(outPath, '.obj') + '.mtl');
 			if (fs.existsSync(mtl)) files.push(fileEntryOf(mtl, 'asset'));
+		}
+		for (const p of companionFiles) {
+			files.push(fileEntryOf(p, 'asset'));
 		}
 
 		const warnings = [...loaded.warnings, ...route.warnings, ...afterLoaded.warnings];

@@ -5,6 +5,7 @@ import { MeshifyError, EXIT_INPUT_UNREADABLE, EXIT_PARAM_CONFLICT, warn } from '
 import type { Texture } from '@gltf-transform/core';
 import {
 	addCommonOptions,
+	assertProcessableGeometry,
 	documentStats,
 	documentToGlbBytes,
 	emitReport,
@@ -76,6 +77,7 @@ export function registerTexture(program: Command): void {
 		progress('读取输入…');
 		const loaded = await loadInput(input, format);
 		assertResourceLimits(loaded.bytes, loaded.inputInfo.faces, { force: !!opts.force });
+		assertProcessableGeometry(loaded.inputInfo, 'texture');
 		const beforeBytes = opts.previewHtml ? await documentToGlbBytes(loaded.doc) : null;
 
 		progress(`UV 投影（${mode}）…`);
@@ -84,7 +86,9 @@ export function registerTexture(program: Command): void {
 
 		if (opts.image !== undefined) {
 			progress('绑定贴图…');
-			attachBaseColorImage(loaded.doc, String(opts.image), mode, warnings);
+			// 必须 await：贴图读取/解码失败要在命令内抛出（exit 2 + manifest），
+			// 漏掉会变成 unhandled rejection → 进程裸崩 exit 1（契约外）
+			await attachBaseColorImage(loaded.doc, String(opts.image), mode, warnings);
 		}
 		if (params.metallic !== undefined || params.roughness !== undefined) {
 			for (const mat of loaded.doc.getRoot().listMaterials()) {
@@ -154,11 +158,19 @@ async function attachBaseColorImage(
 			`--image 贴图不可读: ${imagePath}（${err instanceof Error ? err.message : String(err)}）`,
 		);
 	}
-	const normalized = await normalizeImage(raw);
+	let normalized: Awaited<ReturnType<typeof normalizeImage>>;
+	try {
+		normalized = await normalizeImage(raw);
+	} catch (err) {
+		throw new MeshifyError(
+			EXIT_INPUT_UNREADABLE,
+			`--image 不是可解码的图片文件: ${imagePath}（${err instanceof Error ? err.message : String(err)}）`,
+		);
+	}
 	if (normalized.converted) {
 		warnings.push(
 			warn(
-				'TEXTURE_DOWNSCALED',
+				'TEXTURE_FORMAT_CONVERTED',
 				`贴图 ${path.basename(imagePath)} 非 PNG/JPEG，已规范化转 PNG（glTF 核心规范只内建这两种位图格式）`,
 			),
 		);

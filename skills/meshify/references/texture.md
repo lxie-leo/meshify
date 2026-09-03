@@ -19,7 +19,7 @@ meshify texture <input> --map <mode> [--image tex.png] [--metallic 0] [--roughne
 - `--map uv` 但模型无 UV → 自动盒式投影 + `AUTO_BOX_UV_GENERATED`（不静默）
 - UV 是合并产生的色块图集（≤64px 贴图特征）→ 忽略并盒式回退 + `ATLAS_UV_IGNORED`（坑 2）
 - `--image`：绑定 baseColor 贴图；非 PNG/JPEG（webp/tiff/bmp/gif）自动规范化转 PNG +
-  `TEXTURE_DOWNSCALED`（glTF 核心规范只内建 PNG/JPEG 两种位图）
+  `TEXTURE_FORMAT_CONVERTED`（glTF 核心规范只内建 PNG/JPEG 两种位图）
 - `--map uv` 与 `--image` 互斥（保留旧 UV 无法保证贴图正确映射）——exit 4
 - `--metallic/--roughness`：覆盖所有材质的 PBR 标量
 - STL 等无材质输入：自动补默认材质保证贴图有落点
@@ -35,5 +35,5 @@ meshify texture <input> --map <mode> [--image tex.png] [--metallic 0] [--roughne
 
 ## 报告要点
 
-`warnings` 会列出全部近似决策（AUTO_BOX_UV_GENERATED / ATLAS_UV_IGNORED / TEXTURE_DOWNSCALED）。
+`warnings` 会列出全部近似决策（AUTO_BOX_UV_GENERATED / ATLAS_UV_IGNORED / TEXTURE_FORMAT_CONVERTED）。
 贴图后体积可能增大（纹理由外置变内嵌）——`byte_reduction` 为负是正常的。

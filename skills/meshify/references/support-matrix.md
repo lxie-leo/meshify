@@ -22,7 +22,7 @@ T0 = Tier0 默认；T1 = `--tier py` 显式可选；T1（必需）= 仅 Tier1。
   写侧产物使用核心 + EXT_meshopt_compression；未知自定义扩展在转换中可能丢弃
 - **OBJ 顶点法线（vn）**：Tier1 inspect 保守上报 has_normals=false（trimesh 归一化重算，
   无法区分来源）；Tier0 按文件声明精确上报
-- **贴图格式**：glTF 核心只内建 PNG/JPEG；webp 等输入自动转 PNG（`TEXTURE_DOWNSCALED`）
+- **贴图格式**：glTF 核心只内建 PNG/JPEG；webp 等输入自动转 PNG（`TEXTURE_FORMAT_CONVERTED`）
 - **大模型**：输入 >500MB 或 >500 万面触发资源防护（exit 7），`--force` 一次性处理或先拆件
 
 ## Agent 宿主
