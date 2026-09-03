@@ -20,14 +20,17 @@ const TIER1 = () => hasUv() && isKernelSynced(resolveKernelPyDir());
 // 审计 #5：损坏输入 → 双内核统一 exit 2（曾 ts=8 / py=6/8 漂移）
 // ------------------------------------------------------------------
 describe('审计回归：损坏输入归一 exit 2', () => {
-	it('截断 GLB + simplify（Tier0）→ 2 + 诊断，不伪造 manifest（曾 exit 8）', () => {
+	it('截断 GLB + simplify（Tier0）→ 2 + 诊断 + 最小失败 manifest（曾 exit 8 无报告）', () => {
 		const dir = freshDir('audit-corrupt');
 		const f = path.join(dir, 'corrupt.glb');
 		fs.writeFileSync(f, fs.readFileSync(FIX('glb/dense.glb')).subarray(0, 8000));
 		const r = cli(['simplify', f, '--ratio', '0.5', '-o', path.join(dir, 'o.glb'), '--json']);
 		expect(r.code).toBe(2);
 		expect(r.stderr).toMatch(/解析失败|不可读/);
-		expect(r.manifest).toBeNull();
+		// 早失败最小 manifest：errors 携带原因，产物绝不出现在盘上
+		expect(r.manifest?.exit_code).toBe(2);
+		expect((r.manifest?.errors ?? []).join(' ')).toMatch(/解析失败|不可读/);
+		expect(fs.existsSync(path.join(dir, 'o.glb'))).toBe(false);
 	});
 
 	it.runIf(TIER1())(
@@ -70,8 +73,9 @@ describe('审计回归：convert 输出契约', () => {
 		const r = cli(['convert', FIX('glb/dense.glb'), '--to', 'stl', '-o', path.join(dir, 'bad.glb'), '--json']);
 		expect(r.code).toBe(4);
 		expect(r.stderr).toMatch(/扩展名|一致/);
-		// 拒绝先于写入
-		expect(fs.readdirSync(dir)).toEqual([]);
+		// 拒绝先于写入：产物绝不出盘（失败 report 是工具自有日志，允许落盘）
+		expect(fs.readdirSync(dir).filter((f) => !f.endsWith('.report.json'))).toEqual([]);
+		expect(fs.existsSync(path.join(dir, 'bad.glb'))).toBe(false);
 	});
 
 	it('--to gltf：外部 .bin 与贴图伴生逐个列入 files[]（曾只列主文件）', () => {

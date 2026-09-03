@@ -175,7 +175,7 @@ function acc(doc, type, array) {
 	return doc.createAccessor().setType(type).setArray(array).setBuffer(buffer);
 }
 
-function addPrimitive(doc, name, geom, material, translation) {
+function addPrimitive(doc, name, geom, material, translation, scene) {
 	const prim = doc.createPrimitive();
 	prim.setAttribute('POSITION', acc(doc, 'VEC3', geom.positions));
 	prim.setAttribute('NORMAL', acc(doc, 'VEC3', geom.normals));
@@ -184,7 +184,10 @@ function addPrimitive(doc, name, geom, material, translation) {
 	if (material) prim.setMaterial(material); // 材质必须挂到 primitive：孤儿材质测不到坑 1/坑 2 路径
 	const mesh = doc.createMesh(name).addPrimitive(prim);
 	const node = doc.createNode(name).setMesh(mesh).setTranslation(translation ?? [0, 0, 0]);
-	doc.createScene('Scene').addChild(node);
+	// 复用首个 scene（未显式指定时）：每次 createScene 会产出多 scene GLB——
+	// trimesh 只挂默认 scene，Tier1 会把其余 scene 的几何丢成孤儿
+	const target = scene ?? doc.getRoot().listScenes()[0] ?? doc.createScene('Scene');
+	target.addChild(node);
 	return node;
 }
 
@@ -393,6 +396,18 @@ await writeGlb(skinAnimDoc(), path.join(FIX, 'glb', 'skin-anim.glb'));
 	const doc = makeDoc();
 	doc.createScene('Empty');
 	await writeGlb(doc, path.join(FIX, 'glb', 'empty.glb'));
+}
+
+// 5c. 多 scene GLB（非默认 scene 的几何 → Tier1 孤儿 → ORPHAN_GEOMETRY_ATTACHED 样本）
+{
+	const doc = makeDoc();
+	const mat = doc.createMaterial('ms_mat').setBaseColorFactor([0.3, 0.8, 0.4, 1]).setMetallicFactor(0).setRoughnessFactor(0.6);
+	const main = doc.createScene('Main');
+	const extra = doc.createScene('Extra');
+	addPrimitive(doc, 'ms_box', boxGeom(1, 1, 1), mat, [0, 0, 0], main);
+	addPrimitive(doc, 'ms_sphere', icosphere(2), mat, [2.5, 0, 0], extra);
+	doc.getRoot().setDefaultScene(main); // 默认 scene = Main；球挂在 Extra 上
+	await writeGlb(doc, path.join(FIX, 'glb', 'multiscene.glb'));
 }
 
 // 6. STL（无材质）

@@ -12,11 +12,16 @@ import { resolveKernelPyDir, isKernelSynced } from '@meshify/core';
 const TIER1 = () => hasUv() && isKernelSynced(resolveKernelPyDir());
 
 describe('退出码 2：输入不可读', () => {
-	it('文件不存在（stderr 诊断 + 退出码；无 InputInfo 不伪造 manifest）', () => {
+	it('文件不存在（stderr 诊断 + 退出码 + 最小失败 manifest）', () => {
 		const r = cli(['inspect', 'no/such/file.glb', '--json']);
 		expect(r.code).toBe(2);
 		expect(r.stderr).toMatch(/不存在或不可读|ENOENT/);
-		expect(r.manifest).toBeNull(); // 硬失败不伪造 manifest（绝不信默降级同理）
+		// 早失败也产出最小 manifest：Agent 不必拿退出码猜原因（failed_early 披露）
+		expect(r.manifest).not.toBeNull();
+		expect(r.manifest?.exit_code).toBe(2);
+		expect((r.manifest?.errors ?? []).join(' ')).toMatch(/不存在或不可读|ENOENT/);
+		expect(r.manifest?.output).toBeNull();
+		expect((r.manifest?.params as Record<string, unknown> | undefined)?.failed_early).toBe(true);
 	});
 
 	it('目录当输入', () => {
@@ -53,10 +58,14 @@ describe('退出码 4：参数冲突 / 拒绝覆盖', () => {
 		expect(r.code).toBe(0);
 	});
 
-	it('输出路径 == 输入路径：--overwrite 也拒绝', () => {
-		const src = FIX('glb/small.glb');
+	it('输出路径 == 输入路径：--overwrite 也拒绝（且失败 report 不触碰输入）', () => {
+		const out = freshDir('exit4-self');
+		const src = path.join(out, 'small.glb');
+		fs.copyFileSync(FIX('glb/small.glb'), src);
 		const r = cli(['simplify', src, '-o', src, '--overwrite']);
 		expect(r.code).toBe(4);
+		// 输入字节原封不动（失败 manifest 只落 .meshify/ 报告，绝不写模型文件）
+		expect(fs.statSync(src).size).toBe(fs.statSync(FIX('glb/small.glb')).size);
 	});
 
 	it('参数互斥：ratio 与 target 同时给（明确诊断，非碰巧 exit 4）', () => {
@@ -66,8 +75,9 @@ describe('退出码 4：参数冲突 / 拒绝覆盖', () => {
 		const r = cli(['simplify', copy, '--ratio', '0.5', '--target-faces', '10']);
 		expect(r.code).toBe(4);
 		expect(r.stderr).toMatch(/互斥/);
-		// 参数校验先于任何写入：不产生输出文件
-		expect(fs.readdirSync(out).filter((f) => f !== 'small.glb')).toEqual([]);
+		// 参数校验先于任何写入：不产生模型产物（失败 report 是工具自有日志，允许）
+		expect(fs.readdirSync(out).filter((f) => f !== 'small.glb' && f !== 'small.meshify')).toEqual([]);
+		expect(fs.existsSync(path.join(out, 'small.simplified.glb'))).toBe(false);
 	});
 
 	it('target-faces 单独使用合法（缺省 ratio 不算冲突）', () => {
