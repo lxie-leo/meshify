@@ -116,6 +116,11 @@ meshify doctor
 **读法**：`metrics.face_reduction/byte_reduction` 看效果；`warnings[].code` 看降级（每条都是显式披露，
 不是失败）；`errors` 非空即失败。警告码全表见 references/troubleshooting.md。
 
+**失败路径同样产出 manifest**：非 0 退出码（输入不可读/参数冲突/空场景等早失败）时也会落
+最小 manifest（`errors[]` 带原因、`params.failed_early: true`、输入统计 0 值兜底），
+`--json` 下 stdout 契约不变——统一「先解析 stdout manifest，失败看 errors + exit_code」，
+不必拿退出码猜。字段细节见 references/report-schema.md。
+
 ## 退出码契约（Agent 按码决策）
 
 | 码 | 含义 | 下一步 |

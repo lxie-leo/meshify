@@ -14,7 +14,7 @@ Meshify 把三维模型处理成 **Web / AR / 移动端可交付**的形态。�
 ## ✨ 特性
 
 - **一条 CLI，八个命令** — `inspect` / `simplify` / `segment` / `texture` / `convert` / `lod` / `optimize` / `doctor`
-- **Agent 优先的输出契约** — 语义化退出码（0/2/3/4/5/6/7/8）+ `meshify.report/v1` manifest，失败不伪造报告，降级必带警告码
+- **Agent 优先的输出契约** — 语义化退出码（0/2/3/4/5/6/7/8）+ `meshify.report/v1` manifest，失败也产出结构化错误报告（`errors[]` + `failed_early`），降级必带警告码
 - **零配置即用（Tier0）** — Node ≥ 18.17 + WASM 几何内核（gltf-transform / meshoptimizer / earcut），无需 Python
 - **CAD 增强（Tier1）** — STEP/STP 经 Python（uv 管理）+ gmsh/OpenCASCADE 网格化，未装时明确报错并给安装指引
 - **安全默认** — 源文件永不改动；产物统一写入 `<输入名>.meshify/` 目录；覆盖必须显式 `--overwrite`
@@ -82,7 +82,7 @@ meshify convert part.step --to glb
 | `simplify` | QEM 减面（`--ratio` 保留率 \| `--target-faces` 目标面数，二选一） | 小网格 <200 面跳过 + `SMALL_MESH_SKIPPED` |
 | `segment` | 拆件：`--mode plane\|connected\|semantic` | 平面切割默认封口保水密 |
 | `texture` | 贴图 / UV 重投影（planar/cylindrical/spherical/box/uv） | 缺 UV 子网格自动补盒式 + 警告披露 |
-| `convert` | 格式互转（glb/gltf/obj/stl/ply；STEP 读入走 Tier1） | 材质/纹理跨格式尽量保留，丢失即披露 |
+| `convert` | 格式互转（glb/gltf/obj/stl/ply；STEP 读入走 Tier1） | 材质/纹理跨格式尽量保留，丢失即披露；空场景产出合法空文件 + 警告 |
 | `lod` | 多级细节链（`--levels --ratio`） | level0 原样，逐级单调下降 |
 | `optimize` | 一站式轻量化（减面 + meshopt/draco + 贴图压缩/降采样） | 依赖不可用时降级并披露，不失败 |
 | `doctor` | 环境自检（Tier0/Tier1 就绪性、uv 安装指引） | `--json` 输出机器可读结果 |
@@ -102,9 +102,9 @@ meshify convert part.step --to glb
 | 7 | 资源超限（>500 万面 / >500MB，`--force` 一次性放行） |
 | 8 | 内部错误 |
 
-预加载失败（2/3/4/5）直接在 stderr 输出诊断信息和退出码，不伪造 manifest；用法错误统一收敛进 4。
+用法错误统一收敛进 4。任何非 0 退出（含预加载失败 2/3/4/5）都会落一份最小失败 manifest：`errors[]` 带原因、`params.failed_early: true`、输入统计 0 值兜底，`--json` 时进 stdout——Agent 不必只靠退出码猜原因。
 
-**manifest**：每条命令在 `<输入名>.meshify/` 写 `<输入名>.<op>.report.json`，`--json` 时同一内容进 stdout。`metrics.face_reduction / byte_reduction` 看效果，`warnings[].code` 看降级（19 个警告码全表与字段级文档见 [report-schema.md](skills/meshify/references/report-schema.md) 与 [troubleshooting.md](skills/meshify/references/troubleshooting.md)）。
+**manifest**：每条命令在 `<输入名>.meshify/` 写 `<输入名>.<op>.report.json`，`--json` 时同一内容进 stdout。`metrics.face_reduction / byte_reduction` 看效果，`warnings[].code` 看降级（21 个警告码全表与字段级文档见 [report-schema.md](skills/meshify/references/report-schema.md) 与 [troubleshooting.md](skills/meshify/references/troubleshooting.md)；`face_reduction = 1 - out/in` 是纯数学口径，plane 封口/LOD 场景可为负）。
 
 ## ⚙️ 双层内核（Tiering）
 
@@ -163,7 +163,7 @@ fixtures               黄金样本生成器 + 提交的生成物（多材质/�
 
 - [SKILL.md](skills/meshify/SKILL.md) — Skill 用法总览与决策树
 - [references/](skills/meshify/references/) — 各命令细节、报告 schema、Tier 仲裁、排障
-- [report-schema.md](skills/meshify/references/report-schema.md) — `meshify.report/v1` 字段级文档与 19 个警告码
+- [report-schema.md](skills/meshify/references/report-schema.md) — `meshify.report/v1` 字段级文档与 21 个警告码
 
 ## 🤝 贡献
 

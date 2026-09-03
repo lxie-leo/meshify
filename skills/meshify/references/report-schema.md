@@ -40,7 +40,7 @@
 | 字段 | 出现于 | 说明 |
 |---|---|---|
 | `duration_ms` | 全部 | 耗时（必有） |
-| `face_reduction` | 产出面数的命令 | 1 - out_faces/in_faces |
+| `face_reduction` | 产出面数的命令 | 1 - out_faces/in_faces（数学口径，**可为负**：产物面数多于输入时，如空输入 0 面转出几何、或封口/合并引入新面；判定削减与否看符号而非数值大小） |
 | `byte_reduction` | 同上 | 1 - out_bytes/in_bytes（绑贴图后可为负） |
 | `ratio_actual` | simplify | 实际保留面比（受 min-faces 跳过影响） |
 | `max_error_normalized` | Tier0 simplify | 归一化几何偏差上界（meshopt error 语义） |
@@ -57,3 +57,13 @@
 4. 交付产物路径从 `output.files[]` 取（不要自己拼路径）
 5. `warnings` 里出现 `MATERIAL_DEGRADED_TO_BASE_COLOR`/`TIER_DOWNGRADED` 时，
    向用户说明降级原因与规避方式（对应 references 文档）
+
+## 失败也产出 manifest（早失败最小报告）
+
+TS 侧命令在 MeshifyError 早失败（输入不可读/参数冲突/同格式守卫/空场景等）时，
+rethrow 前尽力落一份最小 manifest：`output: null`、`params: {failed_early: true}`、
+`errors: [原因]`、`exit_code` 与进程退出码一致；输入结构未知时 `input.vertices/faces`
+为 0 兜底（不代表真实统计）。`--json` 下 stdout 照常输出完整 JSON——**stdout 的
+manifest 契约在成功与失败路径上一致**，Agent 统一按「解析 stdout → 失败看
+errors[] + exit_code」处理。Tier1 路径的失败 manifest 由 py runner 组装（信息更全，
+input 为实测统计），TS 桥原样转发。

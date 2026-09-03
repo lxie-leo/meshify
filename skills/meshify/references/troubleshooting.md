@@ -35,6 +35,9 @@
 | `INDEX_OUT_OF_RANGE` | OBJ 读入 | 面引用越界（不存在的顶点/UV/法线索引），越界分量按默认值兜底 |
 | `SMALL_PARTS_DROPPED` | segment connected | 碎片部件丢弃（全丢时保留最大者） |
 | `DRACO_UNAVAILABLE` | optimize draco | draco3dgltf 可选依赖缺失，几何压缩跳过 |
+| `EMPTY_SCENE_OUTPUT` | convert | 输入空场景（0 面），产物是同格式的合法空文件（结构操作不拦截） |
+| `FORMAT_CONTENT_MISMATCH` | OBJ 读入 | 扩展名与二进制内容不符（如 STL 改名 .obj），按扩展名处理但解析结果可疑 |
+| `ORPHAN_GEOMETRY_ATTACHED` | convert/lod（Tier1） | 输入含未挂载进场景图的孤儿几何（多 scene GLB 的非默认 scene），已显式挂载防止导出丢失 |
 
 ## 常见故障
 
@@ -51,6 +54,10 @@
 
 **重复执行报输出已存在**：默认不覆盖是特性（幂等安全）；确认要覆盖加 `--overwrite`，
 或换 `-o` 输出路径。
+
+**非 0 退出码也想拿 manifest**：早失败（输入不可读/参数冲突等）也会落最小 manifest
+（`params.failed_early=true`、`errors[]` 携带原因、`input.vertices/faces` 为 0 兜底）——
+`--json` 时 stdout 同样输出；Agent 不必只依赖退出码猜原因。
 
 ## 性能参考
 
