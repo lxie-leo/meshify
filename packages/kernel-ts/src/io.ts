@@ -1,4 +1,4 @@
-import { NodeIO, type Document } from '@gltf-transform/core';
+import { Document, Logger, NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { MeshoptDecoder, MeshoptEncoder } from 'meshoptimizer';
 
@@ -13,6 +13,16 @@ import { MeshoptDecoder, MeshoptEncoder } from 'meshoptimizer';
  * 由本包 mesh-readers.ts / mesh-writers.ts 自研实现。
  */
 
+/**
+ * 新建静默 Document。prune/dedup 等 transform 经 doc.getLogger() 打进度日志
+ * （console.info → stdout），而 stdout 是 --json manifest 的契约通道——所有
+ * 自建 Document（OBJ/STL/PLY 读取器、部件输出文档）必须压到 WARN 以下，
+ * 否则 optimize 的 manifest 前会混入 "prune: Removed types..." 污染解析。
+ */
+export function createQuietDocument(): Document {
+	return new Document().setLogger(new Logger(Logger.Verbosity.WARN));
+}
+
 let ioPromise: Promise<NodeIO> | null = null;
 
 export async function createIO(): Promise<NodeIO> {
@@ -20,7 +30,12 @@ export async function createIO(): Promise<NodeIO> {
 		const init = (async () => {
 			await MeshoptDecoder.ready;
 			await MeshoptEncoder.ready;
-			const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
+			// stdout 是 --json manifest 的契约通道：库级 info 日志（prune/dedup 等
+			// transform 的进度输出走 console.info → stdout）必须压到 WARN 以下，
+			// 否则 optimize 的 manifest 前会混入 "prune: Removed types..." 污染解析
+			const io = new NodeIO()
+				.setLogger(new Logger(Logger.Verbosity.WARN))
+				.registerExtensions(ALL_EXTENSIONS);
 			io.registerDependencies({
 				'meshopt.decoder': MeshoptDecoder,
 				'meshopt.encoder': MeshoptEncoder,

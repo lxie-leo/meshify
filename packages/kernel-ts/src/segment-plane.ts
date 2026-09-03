@@ -1,7 +1,8 @@
 import earcut, { refine as earcutRefine } from 'earcut';
-import { Document, type Material } from '@gltf-transform/core';
+import { type Document, type Material } from '@gltf-transform/core';
 import { warn, type ReportWarning } from '@meshify/core';
 import { copyMaterials, type Soup } from './document-utils.js';
+import { createQuietDocument } from './io.js';
 import { weldKey } from './geometry/union-find.js';
 
 /**
@@ -528,7 +529,7 @@ export function buildPlanePartsDocument(
 	cut: PlaneCutResult,
 	opts: { doubleSided?: boolean } = {},
 ): Document {
-	const target = new Document();
+	const target = createQuietDocument();
 	const needed = new Set<Material>();
 	for (const part of cut.parts) {
 		for (const g of part.groups) {

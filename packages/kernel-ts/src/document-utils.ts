@@ -1,5 +1,6 @@
 import { Document, type Material, type Mesh, type Node, type Primitive } from '@gltf-transform/core';
 import { copyToDocument, createDefaultPropertyResolver } from '@gltf-transform/functions';
+import { createQuietDocument } from './io.js';
 import { bboxUnion, computeBBox, type BBox3 } from './geometry/bbox.js';
 import { transformDirection, transformPoint } from './geometry/mat4.js';
 
@@ -263,7 +264,7 @@ export function buildPartDocument(
 	parts: PartGeometry[],
 	opts: { doubleSided?: boolean } = {},
 ): Document {
-	const target = new Document();
+	const target = createQuietDocument();
 
 	// 收集需要的材质并拷贝
 	const neededMaterials = new Set<Material>();
