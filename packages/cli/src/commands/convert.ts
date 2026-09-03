@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { Command } from 'commander';
-import { MeshifyError, EXIT_INTERNAL, EXIT_PARAM_CONFLICT } from '@meshify/core';
+import { MeshifyError, EXIT_INTERNAL, EXIT_PARAM_CONFLICT, warn } from '@meshify/core';
 import {
 	addCommonOptions,
 	documentStats,
@@ -9,6 +9,7 @@ import {
 	emitReport,
 	loadInput,
 	parseTierPref,
+	withFailureManifest,
 	type GlobalOptions,
 } from '../utils/common.js';
 import { assertOutputFormat, sniffInputFormat } from '../utils/format-detect.js';
@@ -36,7 +37,7 @@ export function registerConvert(program: Command): void {
 			.description('格式转换：glb/gltf/obj/stl/ply 互转；STEP(STP) 读入需 Tier1（--tier py 或已安装时 auto）')
 			.argument('<input>', '输入模型（glb/gltf/obj/stl/ply/step/stp）')
 			.option('--to <format>', '目标格式: glb | gltf | obj | stl | ply（必填，默认产物 GLB 最通用）'),
-	).action(async (input: string, cmdOpts: Record<string, unknown>) => {
+	).action(withFailureManifest('convert', (o) => `converted-${String(o.to ?? 'glb').toLowerCase()}`, async (input: string, cmdOpts: Record<string, unknown>) => {
 		const opts = cmdOpts as GlobalOptions & Record<string, unknown>;
 		const startedAt = Date.now();
 		const format = sniffInputFormat(input);
@@ -112,17 +113,27 @@ export function registerConvert(program: Command): void {
 		}
 		progressDone(`转换完成 → ${outPath}`);
 
-		// 输出统计：obj/stl/ply 读回后统计（转换保真，指标以实际产物为准）
-		let afterLoaded: Awaited<ReturnType<typeof loadInput>>;
-		try {
-			afterLoaded = await loadInput(outPath, sniffInputFormat(outPath));
-		} catch (err) {
-			throw new MeshifyError(
-				EXIT_INTERNAL,
-				`转换产物读回失败（${outPath}）: ${err instanceof Error ? err.message : String(err)}`,
+		// 输出统计：obj/stl/ply 读回后统计（转换保真，指标以实际产物为准）。
+		// 空场景例外：stl/ply 读取器把「0 面产物」按坏文件抛错，读回校验会把
+		// 合法的空转换误报成 exit 8——convert 是结构操作，空输入 → 合法空产物 + 披露
+		let afterLoaded: Awaited<ReturnType<typeof loadInput>> | null = null;
+		if (loaded.inputInfo.faces === 0) {
+			loaded.warnings.push(
+				warn('EMPTY_SCENE_OUTPUT', '输入为空场景（0 面），产物是同格式的合法空文件'),
 			);
+		} else {
+			try {
+				afterLoaded = await loadInput(outPath, sniffInputFormat(outPath));
+			} catch (err) {
+				throw new MeshifyError(
+					EXIT_INTERNAL,
+					`转换产物读回失败（${outPath}）: ${err instanceof Error ? err.message : String(err)}`,
+				);
+			}
 		}
-		const stats = { vertices: afterLoaded.inputInfo.vertices, faces: afterLoaded.inputInfo.faces };
+		const stats = afterLoaded
+			? { vertices: afterLoaded.inputInfo.vertices, faces: afterLoaded.inputInfo.faces }
+			: { vertices: 0, faces: 0 };
 		files.push(fileEntryOf(outPath, 'asset'));
 		if (to === 'obj') {
 			const mtl = path.join(path.dirname(outPath), path.basename(outPath, '.obj') + '.mtl');
@@ -132,14 +143,14 @@ export function registerConvert(program: Command): void {
 			files.push(fileEntryOf(p, 'asset'));
 		}
 
-		const warnings = [...loaded.warnings, ...route.warnings, ...afterLoaded.warnings];
+		const warnings = [...loaded.warnings, ...route.warnings, ...(afterLoaded?.warnings ?? [])];
 
 		if (opts.previewHtml && beforeBytes) {
 			progress('生成预览页…');
 			const htmlPath = om.claim(om.previewPath(outPath));
 			writePreviewHtml({
 				before: [{ label: `原始（${format}）`, bytes: beforeBytes }],
-				after: [{ label: `转换产物（${to}，读回预览）`, bytes: await documentToGlbBytes(afterLoaded.doc) }],
+				after: [{ label: `转换产物（${to}，读回预览）`, bytes: await documentToGlbBytes(afterLoaded?.doc ?? loaded.doc) }],
 				report: draftOf({
 					command: 'convert',
 					input: loaded.inputInfo,
@@ -167,5 +178,5 @@ export function registerConvert(program: Command): void {
 			},
 			{ reportPath: opts.report ?? om.reportPath(op), json: !!opts.json },
 		);
-	});
+	}));
 }

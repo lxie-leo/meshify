@@ -4,11 +4,14 @@ import type { Command } from 'commander';
 import type { Document } from '@gltf-transform/core';
 import {
 	MeshifyError,
+	warn,
+	generateReport,
 	EXIT_ALGORITHM_FAILED,
 	EXIT_INPUT_UNREADABLE,
 	EXIT_INTERNAL,
 	EXIT_PARAM_CONFLICT,
 	type InputInfo,
+	type MeshifyReport,
 	type ReportWarning,
 } from '@meshify/core';
 import {
@@ -22,6 +25,8 @@ import {
 	toInputInfo,
 } from '@meshify/kernel-ts';
 import type { InputFormat } from './format-detect.js';
+import { OutputManager } from './output.js';
+import { emitFailureReport } from './report-out.js';
 
 /** commander 全局选项（program.opts() 子集，各命令共用）。 */
 export interface GlobalOptions {
@@ -67,6 +72,16 @@ export async function loadInput(inputPath: string, format: InputFormat): Promise
 				doc = obj.doc;
 				warnings.push(...obj.warnings); // 越界索引 / 材质合并等披露不能在加载层丢弃
 				warnings.push(...mtlWarnings);
+				// 扩展名路由优先：二进制内容冒充 .obj（如 STL 改名）会解析出 0 顶点——
+				// 静默空结果对 Agent 是坑，显式披露让上游有机会检查文件真实格式
+				if (looksLikeBinaryText(text)) {
+					warnings.push(
+						warn(
+							'FORMAT_CONTENT_MISMATCH',
+							`输入 ${path.basename(inputPath)} 按扩展名当 OBJ 处理，但内容是二进制（解析出 ${doc.getRoot().listMeshes().length} 个子网格）；文件可能实际是其它格式改名而来`,
+						),
+					);
+				}
 				break;
 			}
 			case 'stl':
@@ -122,6 +137,18 @@ function readText(p: string): string {
 			`无法读取输入: ${p}（${err instanceof Error ? err.message : String(err)}）`,
 		);
 	}
+}
+
+/** 文本疑似二进制：头部控制字符（NUL 等）占比过高（OBJ 是纯文本格式）。 */
+function looksLikeBinaryText(text: string): boolean {
+	const head = text.slice(0, 4096);
+	if (!head) return false;
+	let suspicious = 0;
+	for (const ch of head) {
+		const c = ch.charCodeAt(0);
+		if (c === 0 || (c < 0x09) || (c > 0x0d && c < 0x20)) suspicious++;
+	}
+	return suspicious / head.length > 0.02;
 }
 
 /** OBJ 伴生 .mtl 探测：<name>.mtl 或 mtllib 声明的文件（同目录）。 */
@@ -183,7 +210,7 @@ export function parseVec3(raw: string, name: string): [number, number, number] {
 // 报告收尾（实现在 report-out.ts；此处再导出供命令层统一引用）
 // ---------------------------------------------------------------------------
 
-export { emitReport, emitExistingReport, fmtCount, fmtBytes } from './report-out.js';
+export { emitReport, emitExistingReport, emitFailureReport, fmtCount, fmtBytes } from './report-out.js';
 
 /** 输出 Document 的统一指标采集（面数/顶点数）。 */
 export async function documentStats(doc: Document): Promise<{ vertices: number; faces: number }> {
@@ -228,6 +255,88 @@ export function parseTierPref(raw: unknown): 'auto' | 'ts' | 'py' {
 		throw new MeshifyError(EXIT_PARAM_CONFLICT, `--tier 只接受 auto | ts | py，收到: ${v}`);
 	}
 	return v;
+}
+
+// ---------------------------------------------------------------------------
+// 失败也产出 manifest（早失败路径的结构化错误披露）
+// ---------------------------------------------------------------------------
+
+type ModelCommandAction = (input: string, opts: GlobalOptions & Record<string, unknown>) => Promise<void>;
+
+/**
+ * MeshifyError 早失败（输入不可读 / 参数冲突 / Tier1 缺位 / 空场景等）默认不落
+ * 任何报告——--json 的 Agent 只能拿退出码。本包装器在 rethrow 前尽力组装最小
+ * manifest（输入结构未知 → 0 值兜底 + errors[] 携带原因）写盘，--json 时进 stdout。
+ *
+ * - Tier1 路径不抛 MeshifyError（kernel 返回后自管 manifest + exitCode），不会双重产出
+ * - op 可为函数（convert 的 op 段含目标格式，在失败时也可从 opts 推出）
+ * - 报告组装自身的失败静默吞掉：不掩盖原始错误
+ */
+export function withFailureManifest(
+	command: string,
+	op: string | ((opts: GlobalOptions & Record<string, unknown>) => string),
+	action: ModelCommandAction,
+): ModelCommandAction {
+	return async (input, opts) => {
+		const startedAt = Date.now();
+		try {
+			await action(input, opts);
+		} catch (err) {
+			if (err instanceof MeshifyError) {
+				try {
+					const report = failureReport(command, input, err, Date.now() - startedAt);
+					// op 可能从原始 opts 推出（convert 的 --to、segment 的 --mode），
+					// 此时值未经验证——净化后才能进报告文件名，防路径逃逸
+					const rawOp = typeof op === 'function' ? op(opts) : op;
+					const opName = rawOp.replace(/[^a-zA-Z0-9_-]/g, '') || 'unknown';
+					const om = new OutputManager(input, { overwrite: true, explicit: opts.output });
+					emitFailureReport(report, {
+						reportPath: opts.report ?? om.reportPath(opName),
+						json: !!opts.json,
+					});
+				} catch {
+					// 报告失败不掩盖原始错误
+				}
+			}
+			throw err;
+		}
+	};
+}
+
+function failureReport(
+	command: string,
+	input: string,
+	err: MeshifyError,
+	durationMs: number,
+): MeshifyReport {
+	let bytes = 0;
+	try {
+		bytes = fs.statSync(input).size;
+	} catch {
+		// 文件可能不存在（exit 2 场景）：bytes=0 如实反映
+	}
+	const inputInfo: InputInfo = {
+		path: path.resolve(input),
+		format: path.extname(input).slice(1).toLowerCase() || 'unknown',
+		bytes,
+		vertices: 0,
+		faces: 0,
+		meshes: [],
+		materials: 0,
+		textures: [],
+		bbox: null,
+		has_animation: false,
+	};
+	return generateReport({
+		command,
+		input: inputInfo,
+		output: null,
+		params: { failed_early: true },
+		warnings: [],
+		errors: [err.message],
+		exitCode: err.code,
+		durationMs,
+	});
 }
 
 /** 数值选项解析（非法 = exit 4）。 */

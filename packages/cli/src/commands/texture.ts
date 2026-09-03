@@ -12,6 +12,7 @@ import {
 	loadInput,
 	parseNumber,
 	parseTierPref,
+	withFailureManifest,
 	type GlobalOptions,
 } from '../utils/common.js';
 import { sniffInputFormat } from '../utils/format-detect.js';
@@ -44,7 +45,7 @@ export function registerTexture(program: Command): void {
 			.option('--image <path>', 'baseColor 贴图文件（png/jpeg/webp/…，自动规范化）')
 			.option('--metallic <n>', '覆盖材质金属度 (0-1)')
 			.option('--roughness <n>', '覆盖材质粗糙度 (0-1)'),
-	).action(async (input: string, cmdOpts: Record<string, unknown>) => {
+	).action(withFailureManifest('texture', 'textured', async (input: string, cmdOpts: Record<string, unknown>) => {
 		const opts = cmdOpts as GlobalOptions & Record<string, unknown>;
 		const startedAt = Date.now();
 		const format = sniffInputFormat(input);
@@ -139,7 +140,7 @@ export function registerTexture(program: Command): void {
 			},
 			{ reportPath: opts.report ?? om.reportPath('textured'), json: !!opts.json },
 		);
-	});
+	}));
 }
 
 /** 读贴图文件 → 规范化为 PNG/JPEG（glTF 核心只认这两种）→ 全材质绑定 baseColor。 */

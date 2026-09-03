@@ -11,6 +11,7 @@ import {
 	parseInteger,
 	parseTierPref,
 	parseVec3,
+	withFailureManifest,
 	type GlobalOptions,
 } from '../utils/common.js';
 import { sniffInputFormat } from '../utils/format-detect.js';
@@ -54,7 +55,8 @@ export function registerSegment(program: Command): void {
 			.option('--normal <vec3>', 'plane 模式：原生坐标系平面法线 "x,y,z"（与 --axis 二选一）')
 			.option('--no-cap', 'plane 模式：禁用截面封口（默认开启 earcut 封口保水密，坑 5）')
 			.option('--min-faces <n>', 'connected 模式：小于该面数的碎片部件丢弃（默认 1 = 不丢）', '1'),
-	).action(async (input: string, cmdOpts: Record<string, unknown>) => {
+		// op 段含 --mode 原始值：早失败时（mode 校验自身抛错）也能落对报告名（wrapper 内净化）
+	).action(withFailureManifest('segment', (o) => `segment-${String(o.mode ?? 'unknown')}`, async (input: string, cmdOpts: Record<string, unknown>) => {
 		const opts = cmdOpts as GlobalOptions & Record<string, unknown>;
 		const startedAt = Date.now();
 		const format = sniffInputFormat(input);
@@ -193,7 +195,7 @@ export function registerSegment(program: Command): void {
 			},
 			{ reportPath: opts.report ?? om.reportPath(op), json: !!opts.json },
 		);
-	});
+	}));
 }
 
 /** --axis + --position → 世界系平面（position∈[-1,1] 线性映射包围盒两端）。 */

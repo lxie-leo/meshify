@@ -20,6 +20,7 @@ import {
 	parseInteger,
 	parseNumber,
 	parseTierPref,
+	withFailureManifest,
 	type GlobalOptions,
 } from '../utils/common.js';
 import { sniffInputFormat } from '../utils/format-detect.js';
@@ -46,7 +47,7 @@ export function registerSimplify(program: Command): void {
 			.option('--merge', '同材质子网格先合并再统一简化（默认逐子网格）')
 			.option('--min-faces <n>', '小于该面数的子网格跳过（默认 200，坑 12）', '200')
 			.option('--aggressiveness <n>', 'Tier1 pyfqmr 语义参数（Tier0 仅回显不使用）', '7'),
-	).action(async (input: string, cmdOpts: Record<string, unknown>) => {
+	).action(withFailureManifest('simplify', 'simplified', async (input: string, cmdOpts: Record<string, unknown>) => {
 		const opts = cmdOpts as GlobalOptions & Record<string, unknown>;
 		const startedAt = Date.now();
 		const format = sniffInputFormat(input);
@@ -138,7 +139,7 @@ export function registerSimplify(program: Command): void {
 			},
 			{ reportPath: opts.report ?? om.reportPath('simplified'), json: !!opts.json },
 		);
-	});
+	}));
 }
 
 // ---- 命令间小工具（避免每命令重复样板） ----

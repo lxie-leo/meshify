@@ -1,5 +1,12 @@
 import type { Command } from 'commander';
-import { addCommonOptions, emitReport, loadInput, parseTierPref, type GlobalOptions } from '../utils/common.js';
+import {
+	addCommonOptions,
+	emitReport,
+	loadInput,
+	parseTierPref,
+	withFailureManifest,
+	type GlobalOptions,
+} from '../utils/common.js';
 import { sniffInputFormat } from '../utils/format-detect.js';
 import { routeTier } from '../utils/tier.js';
 import { OutputManager } from '../utils/output.js';
@@ -13,7 +20,7 @@ export function registerInspect(program: Command): void {
 			.description('分析模型：格式/顶点面数/子网格/材质/纹理/包围盒/疑似问题（只读，无输出文件）')
 			.argument('<input>', '输入模型（glb/gltf/obj/stl/ply；step 需 Tier1）'),
 		{ noOutput: true },
-	).action(async (input: string, cmdOpts: Record<string, unknown>) => {
+	).action(withFailureManifest('inspect', 'inspect', async (input: string, cmdOpts: Record<string, unknown>) => {
 		const opts = cmdOpts as GlobalOptions;
 		const startedAt = Date.now();
 		const format = sniffInputFormat(input);
@@ -40,5 +47,5 @@ export function registerInspect(program: Command): void {
 			},
 			{ reportPath: opts.report ?? om.reportPath('inspect'), json: !!opts.json },
 		);
-	});
+	}));
 }

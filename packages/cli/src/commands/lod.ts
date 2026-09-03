@@ -11,6 +11,7 @@ import {
 	parseInteger,
 	parseNumber,
 	parseTierPref,
+	withFailureManifest,
 	type GlobalOptions,
 } from '../utils/common.js';
 import { sniffInputFormat } from '../utils/format-detect.js';
@@ -36,7 +37,7 @@ export function registerLod(program: Command): void {
 			.option('--ratio <n>', '每级保留面比例（几何级数，默认 0.5 → 100%/50%/25%）', '0.5')
 			.option('--error <n>', '简化误差上限（归一化，默认 0.01）', '0.01')
 			.option('--min-faces <n>', '小于该面数的子网格跳过简化（默认 200）', '200'),
-	).action(async (input: string, cmdOpts: Record<string, unknown>) => {
+	).action(withFailureManifest('lod', 'lod', async (input: string, cmdOpts: Record<string, unknown>) => {
 		const opts = cmdOpts as GlobalOptions & Record<string, unknown>;
 		const startedAt = Date.now();
 		const format = sniffInputFormat(input);
@@ -142,5 +143,5 @@ export function registerLod(program: Command): void {
 			},
 			{ reportPath: opts.report ?? om.reportPath('lod'), json: !!opts.json },
 		);
-	});
+	}));
 }

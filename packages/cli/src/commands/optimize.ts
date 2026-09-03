@@ -10,6 +10,7 @@ import {
 	parseInteger,
 	parseNumber,
 	parseTierPref,
+	withFailureManifest,
 	type GlobalOptions,
 } from '../utils/common.js';
 import { sniffInputFormat } from '../utils/format-detect.js';
@@ -43,7 +44,7 @@ export function registerOptimize(program: Command): void {
 			.option('--texture-format <fmt>', '贴图格式: webp | jpeg | png | none（默认 webp；none = 不动贴图）', 'webp')
 			.option('--texture-size <n>', '贴图最长边上限（超出自动降采样，坑 11）')
 			.option('--min-faces <n>', '小于该面数的子网格跳过简化（默认 200）', '200'),
-	).action(async (input: string, cmdOpts: Record<string, unknown>) => {
+	).action(withFailureManifest('optimize', 'optimized', async (input: string, cmdOpts: Record<string, unknown>) => {
 		const opts = cmdOpts as GlobalOptions & Record<string, unknown>;
 		const startedAt = Date.now();
 		const format = sniffInputFormat(input);
@@ -131,5 +132,5 @@ export function registerOptimize(program: Command): void {
 			},
 			{ reportPath: opts.report ?? om.reportPath('optimized'), json: !!opts.json },
 		);
-	});
+	}));
 }

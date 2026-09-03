@@ -50,6 +50,18 @@ function writeReportFile(p: string, report: MeshifyReport): void {
 	fs.writeFileSync(p, JSON.stringify(report, null, 2), 'utf-8');
 }
 
+/**
+ * 早失败路径的最小 manifest 落盘：不做摘要打印（无成功产物可述），
+ * 仅写报告文件 + --json 时 stdout 输出，让 Agent 在非 0 退出码下也能拿到
+ * 结构化错误（errors[] 携带原因）。组装失败静默——不掩盖原始错误。
+ */
+export function emitFailureReport(report: MeshifyReport, opts: EmitOptions): void {
+	writeReportFile(opts.reportPath, report);
+	if (opts.json) {
+		process.stdout.write(JSON.stringify(report, null, 2) + '\n');
+	}
+}
+
 /** 人类可读摘要（stdout；--json 时替换为完整 manifest）。 */
 export function printSummary(report: MeshifyReport, reportPath: string): void {
 	const lines: string[] = [];
