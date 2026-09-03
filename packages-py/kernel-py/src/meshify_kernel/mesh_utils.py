@@ -123,6 +123,38 @@ def save_mesh(mesh, out_path: str, file_type: Optional[str] = None) -> str:
     return out_path
 
 
+def attach_orphan_geometries(scene) -> List[str]:
+    """把 scene.geometry 中未被场景图挂载的孤儿几何以单位变换挂进默认场景。
+
+    多 scene GLB：trimesh.load(force="scene") 只把默认 scene 的层级挂进 graph，
+    其余 scene 引用的几何成为孤儿——trimesh 导出按 graph 可达性会静默丢弃它们
+    （曾把 3 scene 的 multimat.glb 导成只剩 1/3 子网格）。返回被挂载的几何名，
+    调用方须以 ORPHAN_GEOMETRY_ATTACHED 披露，保证「读到多少、导出多少」。
+    """
+    import numpy as np
+    import trimesh
+
+    if not isinstance(scene, trimesh.Scene):
+        return []
+
+    referenced = set()
+    for node in scene.graph.nodes_geometry:
+        _transform, geom_name = scene.graph[node]
+        referenced.add(geom_name)
+
+    attached: List[str] = []
+    for name in list(scene.geometry.keys()):
+        if name in referenced:
+            continue
+        scene.graph.update(
+            frame_to=f"meshify_orphan::{name}",
+            geometry=name,
+            matrix=np.eye(4),
+        )
+        attached.append(name)
+    return attached
+
+
 def export_gltf_embedded(mesh, out_path: str) -> str:
     """导出自包含 .gltf（外部 buffer/图片内嵌为 data URI；迁移自 maestro）。"""
     import base64
@@ -159,9 +191,56 @@ def export_gltf_embedded(mesh, out_path: str) -> str:
             mime = "image/png" if suffix == ".png" else "image/jpeg"
             img["uri"] = f"data:{mime};base64," + base64.b64encode(bytes(data)).decode("ascii")
 
+    _dedup_data_uri_entries(doc)
+
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False)
     return out_path
+
+
+def _dedup_data_uri_entries(doc: Dict[str, Any]) -> None:
+    """合并字节完全相同的 images/buffers 条目（trimesh 给共享贴图逐引用重复导出：
+    同一 PNG 会在 images 里出现多次——uri 内嵌路径重复 data URI，bufferView 路径
+    重复 (bufferView, mimeType) 对）。images 经 textures[].source 重映射，
+    buffers 经 bufferViews[].buffer 重映射，再压缩索引。"""
+
+    def _dedup(entries, ref_keys, ref_field, key_of):
+        seen: Dict[Any, int] = {}
+        remap: Dict[int, int] = {}
+        for i, entry in enumerate(entries):
+            key = key_of(entry)
+            if key is None:
+                continue
+            if key in seen:
+                remap[i] = seen[key]
+            else:
+                seen[key] = i
+        if not remap:
+            return
+        keep = [i for i in range(len(entries)) if i not in remap]
+        old_to_new = {old: new for new, old in enumerate(keep)}
+        for holder in ref_keys:
+            ref = holder.get(ref_field)
+            if ref is None:
+                continue
+            holder[ref_field] = old_to_new[remap.get(ref, ref)]
+        entries[:] = [entries[i] for i in keep]
+
+    def _image_key(img):
+        uri = img.get("uri", "")
+        if uri.startswith("data:"):
+            return ("uri", uri)
+        # 无 uri → 二进制经 bufferView 引用；同 bufferView + 同 mime = 同一张图
+        if "bufferView" in img:
+            return ("bv", img.get("bufferView"), img.get("mimeType", ""))
+        return None
+
+    def _buffer_key(buf):
+        uri = buf.get("uri", "")
+        return ("uri", uri) if uri.startswith("data:") else None
+
+    _dedup(doc.get("images", []), doc.get("textures", []), "source", _image_key)
+    _dedup(doc.get("buffers", []), doc.get("bufferViews", []), "buffer", _buffer_key)
 
 
 # ------------------------------------------------------------------

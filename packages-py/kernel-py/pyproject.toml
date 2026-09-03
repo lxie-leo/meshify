@@ -25,6 +25,7 @@ dependencies = [
     # 连通域/空间索引加速
     "shapely>=2.0",
     "rtree>=1.2",
+    "networkx>=3.6.1",
 ]
 
 [project.scripts]

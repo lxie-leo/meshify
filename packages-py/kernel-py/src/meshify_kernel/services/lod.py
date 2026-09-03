@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from ..errors import param_conflict
+from ..manifest import warn
 from . import simplify as simplify_svc
 
 
@@ -40,6 +41,17 @@ def lod_file(
     # 层级 0：原始模型直接落盘（LOD 链起点，meshopt LOD 语义）。
     # 先验加载：空场景/坏输入在写盘前失败，不留半截产物。
     scene = _load_any(input_path)
+    # 多 scene GLB：孤儿几何不挂载，part_000 字节直拷虽保留、但层级 1+ 基于
+    # graph 可达性加载会丢它们——统一先挂载（+ 披露），层级链口径一致
+    attached = mu.attach_orphan_geometries(scene)
+    if attached:
+        warnings.append(
+            warn(
+                "ORPHAN_GEOMETRY_ATTACHED",
+                f"输入含 {len(attached)} 个未挂载进场景图的孤儿几何（多 scene GLB 的非默认 scene），"
+                f"已显式挂载防止层级链丢失: {', '.join(attached[:8])}{'…' if len(attached) > 8 else ''}",
+            )
+        )
     v, f = step_svc.scene_totals(scene)
     if f == 0:
         raise ValueError("输入不含任何三角面，无法生成 LOD 链")
@@ -48,12 +60,12 @@ def lod_file(
     if os.path.exists(out0) and not overwrite:
         raise param_conflict(f"输出已存在: {out0}（默认不覆盖；确认覆盖请加 --overwrite）")
 
-    if Path(input_path).suffix.lower() in {".step", ".stp"}:
-        # STEP 不能字节直拷（part_000.glb 会是 .step 改名的坏 GLB）：
-        # 经 gmsh 网格化落成合法 GLB，后续层级基于它级联简化
-        mu.save_mesh(scene, out0, file_type="glb")
-    else:
+    if Path(input_path).suffix.lower() == ".glb" and not attached:
+        # 无孤儿的 GLB 字节直拷（lod_0 语义 = 原样）；其余格式不能直拷
+        # （.step/.obj/.stl/.ply 改名成 .glb 是坏 GLB），经 trimesh 落成合法 GLB
         shutil.copyfile(input_path, out0)
+    else:
+        mu.save_mesh(scene, out0, file_type="glb")
     level_files.append({"level": 0, "path": out0, "vertices": v, "faces": f, "ratio": 1.0})
     total_v += v
     total_f += f
@@ -83,7 +95,8 @@ def lod_file(
         total_v += result["vertices"]
         total_f += result["faces"]
         if level == 1:
-            warnings = result["warnings"]
+            # extend 而非赋值：层级 1 的简化警告不能覆盖已收集的孤儿挂载披露
+            warnings = warnings + result["warnings"]
         stage_input = out_path
 
     return {

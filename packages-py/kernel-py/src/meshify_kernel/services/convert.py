@@ -11,6 +11,7 @@ from typing import Any, Dict
 
 from .. import mesh_utils as mu
 from ..errors import param_conflict
+from ..manifest import warn
 from . import step as step_svc
 
 SUPPORTED = {"glb", "gltf", "obj", "stl", "ply"}
@@ -46,8 +47,24 @@ def convert_file(
         total_v, total_f = step_svc.scene_totals(scene)
     else:
         scene = mu.load_scene(input_path)
+        # 多 scene GLB：未被默认 scene 挂载的几何不 attach 会被导出静默丢弃
+        # （scene_totals 却按 geometry 全量统计 → 面数虚报 + 子网格丢失）
+        attached = mu.attach_orphan_geometries(scene)
+        if attached:
+            warnings.append(
+                warn(
+                    "ORPHAN_GEOMETRY_ATTACHED",
+                    f"输入含 {len(attached)} 个未挂载进场景图的孤儿几何（多 scene GLB 的非默认 scene），"
+                    f"已显式挂载防止导出丢失: {', '.join(attached[:8])}{'…' if len(attached) > 8 else ''}",
+                )
+            )
         _export(scene, output_path, to)
         total_v, total_f = step_svc.scene_totals(scene)
+
+    if total_f == 0:
+        warnings.append(
+            warn("EMPTY_SCENE_OUTPUT", "输入为空场景（0 面），产物是同格式的合法空文件")
+        )
 
     return {
         "output_path": output_path,
@@ -59,7 +76,13 @@ def convert_file(
 
 
 def _export(scene, output_path: str, to: str) -> None:
+    # 空场景：trimesh 拒绝导出空 Scene（"Can't export empty scenes!"），但
+    # convert 是结构操作——空输入应产出同格式的合法空文件（与 Tier0 同口径）
+    import trimesh
+
+    has_faces = any(len(getattr(g, "faces", [])) > 0 for g in getattr(scene, "geometry", {}).values())
+    target = scene if has_faces else trimesh.Trimesh(process=False)
     if to == "gltf":
-        mu.export_gltf_embedded(scene, output_path)
+        mu.export_gltf_embedded(target, output_path)
     else:
-        mu.save_mesh(scene, output_path, file_type=to)
+        mu.save_mesh(target, output_path, file_type=to)
