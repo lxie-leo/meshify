@@ -23,7 +23,35 @@ Meshify 把三维模型处理成 **Web / AR / 移动端可交付**的形态。�
 
 ## 📦 安装
 
-**作为 Agent Skill**（Claude Code / Cursor / Codex / Qoder / CodeBuddy / Comate 等）：
+**从 GitHub 安装到 Agent 宿主**（推荐，无需克隆本仓库；[skills CLI](https://github.com/vercel-labs/skills)，Qoder 官方同款）：
+
+```bash
+# 自动检测本机已装的宿主，交互选择
+npx skills add lxie-leo/meshify --skill meshify
+
+# 或显式指定宿主（-g 装到用户级全局目录）
+npx skills add lxie-leo/meshify --skill meshify -a claude-code   # Claude Code
+npx skills add lxie-leo/meshify --skill meshify -a cursor        # Cursor
+npx skills add lxie-leo/meshify --skill meshify -a codex         # Codex
+npx skills add lxie-leo/meshify --skill meshify -a qoder-cn      # Qoder（国际版 -a qoder）
+npx skills add lxie-leo/meshify --skill meshify -a codebuddy     # CodeBuddy
+npx skills add lxie-leo/meshify --skill meshify -a universal     # Comate 等（装到 .agents/skills/，Comate 会自动加载）
+
+npx skills update                                                # 更新已装 skill
+```
+
+Windows 下 symlink 需要开发者模式，未开启时加 `--copy` 改为复制安装。Cursor 也可走图形界面：Customize → Rules → Add Rule → Remote Rule (GitHub) → 填本仓库地址。
+
+**Claude Code 原生插件市场**（同一路径也适用于 VSCode 扩展的 `/plugins` → Marketplaces）：
+
+```bash
+claude plugin marketplace add lxie-leo/meshify
+claude plugin install meshify@meshify-skills
+```
+
+> 注意：以上远程安装装入的是 skill 文档（`SKILL.md` + `references/`）。CLI 本体目前需在本仓库内构建（见下），npm 发布后将支持 `npx meshify` 直接调用。
+
+**已克隆仓库**（安装器构建 CLI 并复制 skill 到探测到的宿主目录）：
 
 ```bash
 # PowerShell

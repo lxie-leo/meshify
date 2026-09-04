@@ -1,0 +1,16 @@
+{
+  "name": "meshify-skills",
+  "description": "三维模型轻量化与优化 Agent Skill：一条 meshify CLI 完成减面、拆件、贴图、格式转换、LOD 与 Web 交付优化",
+  "owner": {
+    "name": "Leo Xie"
+  },
+  "plugins": [
+    {
+      "name": "meshify",
+      "description": "三维模型轻量化与优化工具链（减面/拆件/贴图/LOD/格式转换），输入 glb/gltf/obj/stl/ply/step，输出 meshify.report/v1 结构化报告",
+      "source": "./",
+      "strict": false,
+      "skills": ["./skills/meshify"]
+    }
+  ]
+}
