@@ -308,10 +308,12 @@ function generateStepFixtures() {
 	try {
 		execFileSync('uv', ['run', '--quiet', 'python', '-X', 'utf8', '-c', [
 			'import os',
-			'from meshify_kernel.services.step import write_step_fixture',
+			'from meshify_kernel.services.step import write_step_fixture, write_holed_base_fixture',
 			`os.makedirs(${JSON.stringify(path.join(FIX, 'step').replace(/\\/g, '/'))}, exist_ok=True)`,
 			// 单立方体：inspect/转换样本
 			`write_step_fixture(${JSON.stringify(path.join(FIX, 'step', 'cube.step').replace(/\\/g, '/'))}, size=2.0)`,
+			// 带四角孔底板的躺姿部件（--up-axis auto 判定样本）
+			`write_holed_base_fixture(${JSON.stringify(path.join(FIX, 'step', 'holed-base.step').replace(/\\/g, '/'))})`,
 			// 三零件装配体（多色，坑 4 样本）：底板 + 两立柱
 			'import gmsh',
 			'gmsh.initialize(interruptible=False)',
@@ -330,7 +332,7 @@ function generateStepFixtures() {
 			'gmsh.finalize()',
 			'print("step fixtures ok")',
 		].join('\n')], { cwd: kernelDir, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' } });
-		console.log('  [ok] step/cube.step + step/assembly.step（OCC 生成）');
+		console.log('  [ok] step/cube.step + step/holed-base.step + step/assembly.step（OCC 生成）');
 	} catch (e) {
 		console.log('  [--] STEP fixtures 跳过（uv 不可用）:', String(e.stderr ?? e.message).slice(0, 120));
 	}

@@ -46,6 +46,12 @@ export const WARNING_CODES = [
 	'FORMAT_CONTENT_MISMATCH',
 	/** 输入含未挂载进场景图的孤儿几何（如多 scene GLB 的非默认 scene），已显式挂载防止导出丢失 */
 	'ORPHAN_GEOMETRY_ATTACHED',
+	/** --preview-html 下原始输入无法在浏览器渲染（STEP 等非 glTF 格式），预览页仅展示产物侧 */
+	'PREVIEW_BEFORE_UNAVAILABLE',
+	/** STEP（CAD 惯例 Z-up）产物已旋转为 glTF 规范 Y-up（几何形状/手性不变，仅朝向规范化） */
+	'UP_AXIS_NORMALIZED',
+	/** --up-axis auto 高置信判定成功：披露判定的朝上轴与几何依据（低置信时 exit 4 拒绝并列候选） */
+	'UP_AXIS_AUTO',
 ] as const;
 
 export type WarningCode = (typeof WARNING_CODES)[number];

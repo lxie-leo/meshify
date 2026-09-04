@@ -36,7 +36,8 @@ export function registerConvert(program: Command): void {
 			.command('convert')
 			.description('格式转换：glb/gltf/obj/stl/ply 互转；STEP(STP) 读入需 Tier1（--tier py 或已安装时 auto）')
 			.argument('<input>', '输入模型（glb/gltf/obj/stl/ply/step/stp）')
-			.option('--to <format>', '目标格式: glb | gltf | obj | stl | ply（必填，默认产物 GLB 最通用）'),
+			.option('--to <format>', '目标格式: glb | gltf | obj | stl | ply（必填，默认产物 GLB 最通用）')
+			.option('--up-axis <axis>', 'STEP 输入的部件朝上轴: x|y|z（可加 - 前缀反向，默认 z=CAD 惯例）或 auto（按安装孔等几何特征自动判定；低置信时 exit 4 并列出候选）。源文件里躺着建模的部件用它扶正'),
 	).action(withFailureManifest('convert', (o) => `converted-${String(o.to ?? 'glb').toLowerCase()}`, async (input: string, cmdOpts: Record<string, unknown>) => {
 		const opts = cmdOpts as GlobalOptions & Record<string, unknown>;
 		const startedAt = Date.now();
@@ -62,6 +63,24 @@ export function registerConvert(program: Command): void {
 			}
 		}
 		const params: Record<string, unknown> = { to };
+		// --up-axis 仅对 STEP 有意义（其余格式浏览器/trimesh 生态默认即按 glTF 惯例处理），
+		// 非 STEP 传了它必须显式拒绝——静默忽略会让用户以为朝向被处理过
+		if (opts.upAxis !== undefined) {
+			const upAxis = String(opts.upAxis).toLowerCase();
+			if (!/^(-?[xyz]|auto)$/.test(upAxis)) {
+				throw new MeshifyError(
+					EXIT_PARAM_CONFLICT,
+					`--up-axis 取值应为 x|y|z（可加 - 前缀表示反向）或 auto，收到: ${opts.upAxis}`,
+				);
+			}
+			if (format !== 'step') {
+				throw new MeshifyError(
+					EXIT_PARAM_CONFLICT,
+					`--up-axis 仅对 STEP 输入有效（当前输入为 ${format}；其余格式按各自生态惯例处理朝向）`,
+				);
+			}
+			params.up_axis = upAxis;
+		}
 
 		const op = `converted-${to}`;
 		const route = await routeTier('convert', input, format, opts, { params, op, ext: to });

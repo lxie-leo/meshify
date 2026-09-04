@@ -25,7 +25,7 @@ from .errors import (
     EXIT_RESOURCE_LIMIT,
     KernelError,
 )
-from .manifest import build_input_info, build_report
+from .manifest import STEP_EXTS, build_input_info, build_report, warn
 
 _MAX_INPUT_BYTES = 512 * 1024 * 1024
 
@@ -92,6 +92,40 @@ def run_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
                 result = handler(input_path, params, output_path, output_dir, overwrite)
 
             warnings.extend(result.pop("warnings", []))
+            # STEP 几何产物统一做了朝上轴规范化（glTF 规范 Y-up，CAD 原生 Z-up）——
+            # 朝向变化对所有走 groups_to_scene 的命令生效，在此集中披露（inspect 无产物不披露）。
+            # STEP 不携带「部件哪个方向朝上」：Z-up 只是 CAD 惯例缺省；部件在源文件里
+            # 躺着建模时（装配坐标系），需要 --up-axis 显式指定；auto = 几何特征自动判定
+            if command != "inspect" and Path(input_path).suffix.lower() in STEP_EXTS:
+                up_axis = str(params.get("up_axis") or "z")
+                auto_resolved = result.pop("up_axis_resolved", None)
+                auto_evidence = result.pop("up_axis_evidence", None)
+                if auto_resolved is not None:
+                    # --up-axis auto 高置信判定成功：披露判定结论与依据；实际旋转按 resolved 轴
+                    params["up_axis_resolved"] = auto_resolved
+                    warnings.append(
+                        warn(
+                            "UP_AXIS_AUTO",
+                            f"--up-axis auto 判定朝上轴为 {auto_resolved}：{auto_evidence}。"
+                            "产物已按该轴旋转为 glTF 规范 Y-up（几何形状不变）",
+                        )
+                    )
+                    up_axis = str(auto_resolved)
+                if up_axis == "y":
+                    msg = "STEP 按 --up-axis y 处理：源坐标已视为 Y-up（glTF 规范即 Y-up），未做旋转"
+                elif up_axis == "z" and auto_resolved is not None:
+                    msg = "STEP 朝上轴经 auto 判定为 z，产物已旋转为 glTF 规范 Y-up（几何形状不变，仅朝向规范化）"
+                elif up_axis == "z":
+                    msg = (
+                        "STEP 坐标按 CAD 惯例视为 Z-up，产物已旋转为 glTF 规范 Y-up"
+                        "（几何形状不变，仅朝向规范化；若部件在源文件中并非 Z 朝上，用 --up-axis 指定）"
+                    )
+                else:
+                    msg = (
+                        f"STEP 按 --up-axis {up_axis} 处理：源坐标的 {up_axis.upper()} 轴为部件朝上方向，"
+                        "产物已旋转为 glTF 规范 Y-up（几何形状不变，仅朝向规范化）"
+                    )
+                warnings.append(warn("UP_AXIS_NORMALIZED", msg))
             output = result.pop("output", None)
             metrics.update(result)
 
@@ -268,10 +302,11 @@ def _cmd_convert(input_path, params, output_path, output_dir, overwrite):
     from .services import convert as svc
 
     to = str(params.get("to", "glb"))
-    result = svc.convert_file(input_path, output_path, to=to, overwrite=overwrite)
+    result = svc.convert_file(input_path, output_path, to=to, up_axis=str(params.get("up_axis", "z")), overwrite=overwrite)
     files = [_file_info(output_path, "asset")]
     output = _single_output(output_path, to, result["vertices"], result["faces"], files)
-    return {"output": output, "warnings": result.get("warnings", []), "tier_note": result.get("tier_note")}
+    extra = {k: result[k] for k in ("up_axis_resolved", "up_axis_evidence") if k in result}
+    return {"output": output, "warnings": result.get("warnings", []), "tier_note": result.get("tier_note"), **extra}
 
 
 def _cmd_lod(input_path, params, output_path, output_dir, overwrite):

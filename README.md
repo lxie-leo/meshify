@@ -132,7 +132,7 @@ meshify convert part.step --to glb
 
 用法错误统一收敛进 4。任何非 0 退出（含预加载失败 2/3/4/5）都会落一份最小失败 manifest：`errors[]` 带原因、`params.failed_early: true`、输入统计 0 值兜底，`--json` 时进 stdout——Agent 不必只靠退出码猜原因。
 
-**manifest**：每条命令在 `<输入名>.meshify/` 写 `<输入名>.<op>.report.json`，`--json` 时同一内容进 stdout。`metrics.face_reduction / byte_reduction` 看效果，`warnings[].code` 看降级（21 个警告码全表与字段级文档见 [report-schema.md](skills/meshify/references/report-schema.md) 与 [troubleshooting.md](skills/meshify/references/troubleshooting.md)；`face_reduction = 1 - out/in` 是纯数学口径，plane 封口/LOD 场景可为负）。
+**manifest**：每条命令在 `<输入名>.meshify/` 写 `<输入名>.<op>.report.json`，`--json` 时同一内容进 stdout。`metrics.face_reduction / byte_reduction` 看效果，`warnings[].code` 看降级（22 个警告码全表与字段级文档见 [report-schema.md](skills/meshify/references/report-schema.md) 与 [troubleshooting.md](skills/meshify/references/troubleshooting.md)；`face_reduction = 1 - out/in` 是纯数学口径，plane 封口/LOD 场景可为负）。
 
 ## ⚙️ 双层内核（Tiering）
 
@@ -191,7 +191,7 @@ fixtures               黄金样本生成器 + 提交的生成物（多材质/�
 
 - [SKILL.md](skills/meshify/SKILL.md) — Skill 用法总览与决策树
 - [references/](skills/meshify/references/) — 各命令细节、报告 schema、Tier 仲裁、排障
-- [report-schema.md](skills/meshify/references/report-schema.md) — `meshify.report/v1` 字段级文档与 21 个警告码
+- [report-schema.md](skills/meshify/references/report-schema.md) — `meshify.report/v1` 字段级文档与 22 个警告码
 
 ## 🤝 贡献
 

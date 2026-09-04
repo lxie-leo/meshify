@@ -22,7 +22,7 @@ description: 三维模型轻量化与优化工具链。输入 glb/gltf/obj/stl/p
 | simplify | QEM 减面（逐子网格保材质） | ✅ | ✅ | `--ratio 0.5`、`--target-faces`、`--min-faces` |
 | segment | 拆件：connected/plane/semantic | ✅ | ✅ | `--mode`、`--axis x --position 0.5`、`--cap` |
 | texture | 五投影 UV + 贴图绑定 | ✅ | ✅ | `--map box`、`--image`、`--metallic/--roughness` |
-| convert | glb/gltf/obj/stl/ply 互转 | ✅ | ✅（STEP 读入） | `--to glb` |
+| convert | glb/gltf/obj/stl/ply 互转 | ✅ | ✅（STEP 读入） | `--to glb`、`--up-axis x\|auto`（STEP 躺着建模时扶正/自动判定） |
 | lod | 多级 LOD链 | ✅ | ✅ | `--levels 3 --ratio 0.5` |
 | optimize | Web 交付一键优化（meshopt+WebP） | ✅ | ⚠️ 无压缩基线 | `--ratio`、`--texture-size` |
 | doctor | 环境自检 + 安装引导 | ✅ | 检测 | `--json`、`--install-uv` |
@@ -85,7 +85,10 @@ meshify lod model.glb --levels 3 --ratio 0.5 --preview-html
 meshify optimize model.glb --ratio 0.5 --texture-size 2048 --preview-html
 
 # STEP（CAD）→ GLB：需要 Tier1
-meshify convert part.step --to glb --preview-html
+meshify convert part.step --to glb
+
+# STEP 里躺着建模的部件（真实朝上轴非 CAD 惯例 Z）扶正后再转
+meshify convert part.step --to glb --up-axis auto --preview-html
 
 # 环境自检（装 Tier1 前后都跑一次）
 meshify doctor

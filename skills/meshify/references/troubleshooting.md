@@ -38,6 +38,9 @@
 | `EMPTY_SCENE_OUTPUT` | convert | 输入空场景（0 面），产物是同格式的合法空文件（结构操作不拦截） |
 | `FORMAT_CONTENT_MISMATCH` | OBJ 读入 | 扩展名与二进制内容不符（如 STL 改名 .obj），按扩展名处理但解析结果可疑 |
 | `ORPHAN_GEOMETRY_ATTACHED` | convert/lod（Tier1） | 输入含未挂载进场景图的孤儿几何（多 scene GLB 的非默认 scene），已显式挂载防止导出丢失 |
+| `PREVIEW_BEFORE_UNAVAILABLE` | Tier1 `--preview-html` | 原始输入非 glb/gltf（如 STEP）浏览器无法渲染，预览页仅产物侧单视窗；产物非 GLB 时整页跳过 |
+| `UP_AXIS_NORMALIZED` | Tier1 全几何命令（STEP 输入） | STEP 坐标按 CAD 惯例视为 Z-up，产物已旋转为 glTF 规范 Y-up（几何形状不变，仅朝向规范化）。若部件在源文件里躺着建模（真实朝上轴非 Z），convert 时用 `--up-axis x\|-y` 等指定扶正 |
+| `UP_AXIS_AUTO` | convert `--up-axis auto` | 高置信自动判定成功：披露判定的朝上轴与几何依据（安装孔簇位置/数量），`params.up_axis_resolved` 为机器可读结论。低置信（对称件/无孔）时 exit 4 拒绝并列候选 |
 
 ## 常见故障
 

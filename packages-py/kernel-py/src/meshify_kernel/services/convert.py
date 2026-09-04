@@ -23,6 +23,7 @@ def convert_file(
     *,
     to: str,
     resolution: int = 100,
+    up_axis: str = "z",
     overwrite: bool = False,
 ) -> Dict[str, Any]:
     to = to.lower().lstrip(".")
@@ -38,11 +39,22 @@ def convert_file(
 
     ext = Path(input_path).suffix.lower()
     warnings = []
+    auto_info = None
     if ext in {".step", ".stp"}:
+        if up_axis == "auto":
+            det = step_svc.detect_up_axis(input_path)
+            if det["resolved"] is None:
+                cands = "；".join(f"{c['axis']}: {c['note']}" for c in det["candidates"]) or "无可用平面特征"
+                raise param_conflict(
+                    f"--up-axis auto 无法判定朝上轴：{det['evidence']}。候选参考：{cands}。"
+                    "请用 --up-axis x|y|z（可加 - 前缀反向）显式指定"
+                )
+            up_axis = str(det["resolved"])
+            auto_info = det
         groups, _bbox = step_svc.mesh_step_groups(input_path, resolution)
         if not groups:
             raise ValueError("STEP 文件未生成任何三角面，可能不包含实体几何或文件已损坏")
-        scene = step_svc.groups_to_scene(groups)
+        scene = step_svc.groups_to_scene(groups, up_axis)
         _export(scene, output_path, to)
         total_v, total_f = step_svc.scene_totals(scene)
     else:
@@ -72,6 +84,7 @@ def convert_file(
         "faces": total_f,
         "warnings": warnings,
         "tier_note": f"trimesh 导出 {to}" + ("；STEP 经 OCC 网格化" if ext in {".step", ".stp"} else ""),
+        **({"up_axis_resolved": auto_info["resolved"], "up_axis_evidence": auto_info["evidence"]} if auto_info else {}),
     }
 
 
