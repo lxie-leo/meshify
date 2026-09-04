@@ -19,7 +19,7 @@ Meshify 把三维模型处理成 **Web / AR / 移动端可交付**的形态。�
 - **CAD 增强（Tier1）** — STEP/STP 经 Python（uv 管理）+ gmsh/OpenCASCADE 网格化，未装时明确报错并给安装指引
 - **安全默认** — 源文件永不改动；产物统一写入 `<输入名>.meshify/` 目录；覆盖必须显式 `--overwrite`
 - **质量可验证** — 自研 Hausdorff 采样与水密性计数断言，双内核一致性由测试套件保障
-- **before/after 预览** — `--preview-html` 生成的自包含对比页，浏览器直接打开
+- **before/after 预览** — `--preview-html` 自包含对比页，浏览器直接打开；skill 示例默认带上，省略即关闭
 
 ## 📦 安装
 

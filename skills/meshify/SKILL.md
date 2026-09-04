@@ -46,6 +46,10 @@ description: 三维模型轻量化与优化工具链。输入 glb/gltf/obj/stl/p
 每次命令后：读 report.json（或 --json stdout）核对 warnings 与削减指标
 ```
 
+**产物命令默认带 `--preview-html`**（simplify/segment/texture/convert/lod/optimize）：生成
+before/after 对比页，肉眼核对效果最快。关 = 省略该 flag——用户明确说不要预览、或批量/
+无人值守跑批时省略（HTML 内嵌 base64 模型，体积 ≈ 产物 1.33 倍；three.js 走 CDN 需联网）。
+
 **semantic 的边界**：`--mode semantic` 认的是「朝向+位置」聚类，不是零件语义。装配体拆件用 connected；
 想按外观分区（平面/曲面/不同朝向）才用 semantic。
 
@@ -56,39 +60,40 @@ description: 三维模型轻量化与优化工具链。输入 glb/gltf/obj/stl/p
 meshify inspect model.glb --json
 
 # 减面到 30%（逐子网格保材质；<200 面子网格跳过并警告）
-meshify simplify model.glb --ratio 0.3
+meshify simplify model.glb --ratio 0.3 --preview-html
 
 # 精确目标面数 + 误差上限
-meshify simplify model.glb --target-faces 50000 --error 0.005
+meshify simplify model.glb --target-faces 50000 --error 0.005 --preview-html
 
 # 连通域拆件（装配体首选；丢弃 <50 面碎件）
-meshify segment model.glb --mode connected --min-faces 50
+meshify segment model.glb --mode connected --min-faces 50 --preview-html
 
 # 平面切割：滑块语义（-1..1 映射包围盒）或原生坐标二选一
-meshify segment model.glb --mode plane --axis x --position 0
+meshify segment model.glb --mode plane --axis x --position 0 --preview-html
 meshify segment model.glb --mode plane --origin "0,10,0" --normal "0,1,0"
 
 # 贴图（盒式投影，无 UV 时自动生成并警告披露）
-meshify texture model.glb --map box --image diffuse.png --metallic 0.1
+meshify texture model.glb --map box --image diffuse.png --metallic 0.1 --preview-html
 
 # 格式转换（输出 STL 给切片软件）
-meshify convert model.glb --to stl
+meshify convert model.glb --to stl --preview-html
 
 # 三级 LOD（100%/50%/25%）
-meshify lod model.glb --levels 3 --ratio 0.5
+meshify lod model.glb --levels 3 --ratio 0.5 --preview-html
 
 # Web 交付：减面 + 纹理 2048 上限 + meshopt 压缩
-meshify optimize model.glb --ratio 0.5 --texture-size 2048
+meshify optimize model.glb --ratio 0.5 --texture-size 2048 --preview-html
 
 # STEP（CAD）→ GLB：需要 Tier1
-meshify convert part.step --to glb
+meshify convert part.step --to glb --preview-html
 
 # 环境自检（装 Tier1 前后都跑一次）
 meshify doctor
 ```
 
 通用选项（全部命令）：`-o <path>` 显式输出路径、`--json` manifest 到 stdout、`--overwrite`、
-`--tier auto|ts|py`、`--preview-html` 生成 before/after 对比页、`--force` 超限一次性处理。
+`--tier auto|ts|py`、`--force` 超限一次性处理。`--preview-html` 见决策树后的默认策略——
+产物命令默认带上（省略即关闭）。
 
 ## 报告解读（meshify.report/v1）
 
@@ -153,7 +158,7 @@ model.meshify/
   ├─ model.segment-plane.glb        # 分割合并产物（部件级 scene）
   ├─ model.segment-plane/part_000.glb ...   # Tier1 多部件目录
   ├─ model.lod0.glb / lod1.glb ...  # LOD 链（Tier0）
-  └─ model.optimized.preview.html   # --preview-html 对比页（自包含单文件，可直接开浏览器）
+  └─ *.preview.html                 # --preview-html 对比页（与产物同名，自包含单文件，可直接开浏览器）
 ```
 
 ## 排障指针
