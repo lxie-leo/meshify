@@ -9,6 +9,8 @@ import type { MeshifyReport } from '@meshify/core';
  * - 坑 10 防护：网格缺 NORMAL 属性时对该网格材质开 flatShading（避免产物看起来比预览暗）
  * - 坑 11 防护：按贴图平均亮度分段调 envMapIntensity（近白贴图不过曝白糊）
  *   TEXTURED_ENV_BASE=0.65 / ENV_MIN=0.3 / ENV_MAX=0.85 / KNEE=0.5
+ * - 地面网格按模型包围盒尺度生成 + 接地阴影：模型落地上才有空间参照，旋转不迷向；
+ *   旋转俯仰角钳制在地平线附近（不会转到地板下面）
  * - 叠加 manifest 指标面板（面数/体积/警告）
  */
 
@@ -58,6 +60,7 @@ const HTML_TEMPLATE = `<!doctype html>
     border-bottom: 1px solid #2a3240; display: flex; gap: 16px; align-items: baseline; }
   header b { color: #e8eef7; font-size: 15px; }
   #panes { flex: 1; display: flex; min-height: 0; }
+  #panes.single #pane-before { display: none; }
   .pane { flex: 1; position: relative; min-width: 0; }
   .pane + .pane { border-left: 1px solid #2a3240; }
   .pane .tag { position: absolute; top: 10px; left: 12px; z-index: 2; font-size: 12px;
@@ -88,16 +91,16 @@ const HTML_TEMPLATE = `<!doctype html>
   </div>
 </div>
 <div id="metrics"></div>
-<div id="status">加载中…<div id="status-sub" style="font-size:12px;color:#5c6b82"></div></div>
+<div id="status"><div id="status-msg">加载中…</div><div id="status-sub" style="font-size:12px;color:#5c6b82"></div></div>
 <script>
 var DATA = __DATA__;
 
 function setStatus(msg, sub, isErr) {
-  var el = document.getElementById('status');
-  el.textContent = msg;
-  if (isErr) el.className = 'err';
-  var s = document.getElementById('status-sub');
-  s.textContent = sub || '';
+  // 消息写进独立的 #status-msg：直接写 #status.textContent 会清空其子树，
+  // 嵌在里面的 #status-sub 会被销毁，下一次调用 getElementById 拿到 null
+  document.getElementById('status-msg').textContent = msg;
+  document.getElementById('status-sub').textContent = sub || '';
+  if (isErr) document.getElementById('status').className = 'err';
 }
 
 function b64ToBytes(b64) {
@@ -203,22 +206,64 @@ function applyEnvIntensity(root) {
 function createViewer(pane, THREE, envTexture) {
   var renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(window.devicePixelRatio || 1);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.domElement.style.width = '100%';
   renderer.domElement.style.height = '100%';
   pane.appendChild(renderer.domElement);
   var scene = new THREE.Scene();
   scene.background = new THREE.Color(0x1a1e26);
   if (envTexture) scene.environment = envTexture;
-  var grid = new THREE.GridHelper(10, 20, 0x2c3a4f, 0x222a36);
-  grid.position.y = 0;
-  scene.add(grid);
+  // 基础光照兜底：PMREM 环境生成失败（envTexture=null）时场景零光源会渲染全黑；
+  // 环境存在时灯光减半，避免与环境反射叠加过曝
+  var boost = envTexture ? 0.5 : 1.0;
+  scene.add(new THREE.HemisphereLight(0xdde6f2, 0x30363f, 0.9 * boost));
+  var dir = new THREE.DirectionalLight(0xffffff, 1.6 * boost);
+  dir.position.set(3, 6, 4);
+  scene.add(dir);
   function resize() {
     var w = pane.clientWidth || 1, h = pane.clientHeight || 1;
     renderer.setSize(w, h, false);
   }
   new ResizeObserver(resize).observe(pane);
   resize();
-  return { renderer: renderer, scene: scene, pane: pane };
+  return { renderer: renderer, scene: scene, pane: pane, dir: dir };
+}
+
+function groundAndShadow(THREE, viewer, box) {
+  // 地面网格按模型包围盒尺度生成：固定 10 单位的网格在大模型下小到不可见，
+  // 模型悬在虚空里没有地面参照，旋转缺乏空间感；网格贴模型底部 + 投射接地阴影
+  var size = box.getSize(new THREE.Vector3());
+  var center = box.getCenter(new THREE.Vector3());
+  var maxDim = Math.max(size.x, size.y, size.z) || 1;
+  var gridSize = maxDim * 2.6;
+  var grid = new THREE.GridHelper(gridSize, 24, 0x3d4f6b, 0x2a3547);
+  grid.position.set(center.x, box.min.y, center.z);
+  viewer.scene.add(grid);
+  // ShadowMaterial 只显示阴影本身，不遮挡背景与网格；略低于网格避免深度冲突
+  var plane = new THREE.Mesh(
+    new THREE.PlaneGeometry(gridSize, gridSize),
+    new THREE.ShadowMaterial({ opacity: 0.32 })
+  );
+  plane.rotation.x = -Math.PI / 2;
+  plane.position.set(center.x, box.min.y - maxDim * 0.001, center.z);
+  plane.receiveShadow = true;
+  viewer.scene.add(plane);
+  viewer.scene.traverse(function (o) { if (o.isMesh && o !== plane) o.castShadow = true; });
+  // 平行光按模型尺度重定位并配置阴影相机：默认 (3,6,4) 的近距离在大模型内部，
+  // 阴影相机近平面会裁掉几何导致阴影破碎
+  var d = viewer.dir;
+  var R = size.length() / 2 || maxDim; // 包围球半径
+  d.position.copy(center).addScaledVector(new THREE.Vector3(3, 6, 4).normalize(), R * 2.5);
+  d.target.position.copy(center);
+  viewer.scene.add(d.target);
+  d.castShadow = true;
+  d.shadow.mapSize.set(2048, 2048);
+  d.shadow.camera.left = -R * 2; d.shadow.camera.right = R * 2;
+  d.shadow.camera.top = R * 2; d.shadow.camera.bottom = -R * 2;
+  d.shadow.camera.near = R * 1.2; d.shadow.camera.far = R * 4;
+  d.shadow.bias = -0.0001;
+  d.shadow.camera.updateProjectionMatrix();
 }
 
 function attachControls(canvases, camera) {
@@ -249,7 +294,8 @@ function attachControls(canvases, camera) {
           state.target.y += dy * panScale;
         } else {
           state.theta -= dx * 0.008;
-          state.phi = Math.min(Math.max(state.phi - dy * 0.008, 0.05), Math.PI - 0.05);
+          // 俯仰角钳在地平线略下方：有地面网格后转到地板下面会失去上下参照
+          state.phi = Math.min(Math.max(state.phi - dy * 0.008, 0.05), Math.PI * 0.52);
         }
       });
       canvas.addEventListener('pointerup', function () { drag = null; });
@@ -327,6 +373,13 @@ function escapeHtml(s) {
 
 function main() {
   if (!DATA.report) { setStatus('预览数据缺失'); return; }
+  // before 无可渲染形态（STEP 等输入）：切单视窗，只展示产物侧
+  if (!DATA.before.length) {
+    document.getElementById('panes').classList.add('single');
+    document.querySelector('#pane-after .tag').textContent = 'AFTER · 产物（原始输入无可视化格式）';
+    var hint = document.querySelector('header span:last-of-type');
+    if (hint) hint.textContent = '拖动旋转 · 滚轮缩放 · 右键平移';
+  }
   renderMetrics(DATA.report);
   setStatus('加载 three.js…');
   var THREE, GLTFLoader, RoomEnvironment;
@@ -368,6 +421,17 @@ function boot(THREE, GLTFLoader, RoomEnvironment) {
   var vBefore = createViewer(document.getElementById('pane-before'), THREE, envTexture);
   var vAfter = createViewer(document.getElementById('pane-after'), THREE, envTexture);
   var controls = attachControls([vBefore.renderer.domElement, vAfter.renderer.domElement], camera);
+  // 相机纵横比必须跟随视窗：PerspectiveCamera 建时 aspect=1，不随 pane 尺寸更新时
+  // 宽视窗（单视窗占满整窗，宽高比 ~1.7）画面被横向拉伸——静止看是压扁，旋转时
+  // 不同角度呈现不同的剪切变形（「哈哈镜」感）。双视窗两 pane 尺寸一致，取其一即可；
+  // 单视窗下 before 隐藏，读取的始终是可见的 after。
+  function syncAspect() {
+    var w = vAfter.pane.clientWidth || 1, h = vAfter.pane.clientHeight || 1;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  new ResizeObserver(syncAspect).observe(vAfter.pane);
+  syncAspect();
 
   var loader = new GLTFLoader();
   function loadInto(scene, models) {
@@ -395,15 +459,13 @@ function boot(THREE, GLTFLoader, RoomEnvironment) {
     if (!boxes[0].isEmpty()) all.union(boxes[0]);
     if (!boxes[1].isEmpty()) all.union(boxes[1]);
     fitCamera(controls, all);
-    var gridBefore = vBefore.scene.children[0];
-    if (gridBefore && gridBefore.position) {
-      gridBefore.position.y = all.min ? all.min.y : 0;
-      var g2 = vAfter.scene.children[0];
-      if (g2) g2.position.y = all.min ? all.min.y : 0;
+    if (!all.isEmpty()) {
+      groundAndShadow(THREE, vBefore, all);
+      groundAndShadow(THREE, vAfter, all);
     }
     (function tick() {
       controls.update();
-      vBefore.renderer.render(vBefore.scene, camera);
+      if (DATA.before.length) vBefore.renderer.render(vBefore.scene, camera);
       vAfter.renderer.render(vAfter.scene, camera);
       requestAnimationFrame(tick);
     })();

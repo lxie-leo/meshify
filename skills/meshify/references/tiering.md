@@ -35,4 +35,6 @@
 
 - segment/lod 多部件走 `output_dir/part_000.glb…`（Tier0 是单 GLB 多节点或独立 lodN 文件）
 - optimize 无几何压缩（`TIER_DOWNGRADED`）
+- `--preview-html` 同样生效（成功产物上生成）；但 STEP 等非 glTF 输入没有浏览器渲染形态，
+  before 侧缺席 → 单视窗页 + `PREVIEW_BEFORE_UNAVAILABLE` 披露；产物非 GLB（convert --to stl 等）整页跳过
 - 部件文件覆盖约定两侧一致：存在即拒（exit 4），`--overwrite` 才覆盖
