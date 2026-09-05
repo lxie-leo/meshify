@@ -47,7 +47,7 @@ def load_scene(file_path: str):
 
         groups, _bbox = step_svc.mesh_step_groups(file_path)
         if not groups:
-            raise ValueError("STEP 文件未生成任何三角面，可能不包含实体几何或文件已损坏")
+            raise ValueError("STEP file produced no triangles; the file may contain no solid geometry or be corrupt")
         return step_svc.groups_to_scene(groups)
 
     import trimesh
@@ -57,7 +57,7 @@ def load_scene(file_path: str):
     try:
         return trimesh.load(file_path, force="scene", process=False)
     except Exception as e:
-        raise input_unreadable(f"输入解析失败（{Path(file_path).name}）: {e}") from e
+        raise input_unreadable(f"Input parse failed ({Path(file_path).name}): {e}") from e
 
 
 def load_scene_meshes(file_path: str):
@@ -83,7 +83,7 @@ def load_mesh_merged(file_path: str):
 
         groups, _bbox = step_svc.mesh_step_groups(file_path)
         if not groups:
-            raise ValueError("STEP 文件未生成任何三角面，可能不包含实体几何或文件已损坏")
+            raise ValueError("STEP file produced no triangles; the file may contain no solid geometry or be corrupt")
         verts = [v for _, v, _f in groups]
         faces = []
         offset = 0
@@ -92,7 +92,7 @@ def load_mesh_merged(file_path: str):
             offset += len(v)
         mesh = trimesh.Trimesh(vertices=np.vstack(verts), faces=np.vstack(faces), process=False)
         if len(mesh.vertices) == 0:
-            raise ValueError("模型中不包含任何几何体")
+            raise ValueError("Model contains no geometry")
         return mesh
 
     if _is_empty_obj(file_path):
@@ -100,9 +100,9 @@ def load_mesh_merged(file_path: str):
     try:
         mesh = trimesh.load(file_path, force="mesh", process=False)
     except Exception as e:
-        raise input_unreadable(f"输入解析失败（{Path(file_path).name}）: {e}") from e
+        raise input_unreadable(f"Input parse failed ({Path(file_path).name}): {e}") from e
     if not isinstance(mesh, trimesh.Trimesh) or len(mesh.vertices) == 0:
-        raise ValueError("模型中不包含任何几何体")
+        raise ValueError("Model contains no geometry")
     return mesh
 
 
@@ -175,7 +175,7 @@ def export_gltf_embedded(mesh, out_path: str) -> str:
         if uri and not uri.startswith("data:"):
             data = _lookup(uri)
             if data is None:
-                raise ValueError(f"glTF 导出失败: 找不到外部资源 {uri}")
+                raise ValueError(f"glTF export failed: external resource not found: {uri}")
             buf["uri"] = (
                 "data:application/octet-stream;base64,"
                 + base64.b64encode(bytes(data)).decode("ascii")
@@ -186,7 +186,7 @@ def export_gltf_embedded(mesh, out_path: str) -> str:
         if uri and not uri.startswith("data:"):
             data = _lookup(uri)
             if data is None:
-                raise ValueError(f"glTF 导出失败: 找不到外部资源 {uri}")
+                raise ValueError(f"glTF export failed: external resource not found: {uri}")
             suffix = Path(uri).suffix.lower()
             mime = "image/png" if suffix == ".png" else "image/jpeg"
             img["uri"] = f"data:{mime};base64," + base64.b64encode(bytes(data)).decode("ascii")

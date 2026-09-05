@@ -78,7 +78,7 @@ export async function simplifyDocument(
 		// 坑 12：小网格跳过
 		if (before < minFaces) {
 			warnings.push(
-				warn('SMALL_MESH_SKIPPED', `${info.name}: ${before} < min-faces ${minFaces}，已跳过简化原样保留`, info.name),
+				warn('SMALL_MESH_SKIPPED', `${info.name}: ${before} < min-faces ${minFaces}, skipped and kept as-is`, info.name),
 			);
 			facesAfter += before;
 			continue;
@@ -99,7 +99,7 @@ export async function simplifyDocument(
 					warnings.push(
 						warn(
 							'UV_REMAP_APPROXIMATED',
-							`${info.name}: 贴图网格经简化，纹理在塌缩区域按子集顶点采样，极端形变区可能轻微拉伸`,
+							`${info.name}: textured mesh simplified; textures sample from the retained vertex subset in collapsed regions, so heavily deformed areas may stretch slightly`,
 							info.name,
 						),
 					);
@@ -110,13 +110,13 @@ export async function simplifyDocument(
 			}
 		} catch (err) {
 			partial = true;
-			errors.push(`${info.name}: 简化失败（${err instanceof Error ? err.message : String(err)}），已保留原样`);
+			errors.push(`${info.name}: simplification failed (${err instanceof Error ? err.message : String(err)}); kept as-is`);
 			facesAfter += before;
 		}
 	}
 
 	if (partial) {
-		warnings.push(warn('PARTIAL_SUCCESS', '部分子网格简化失败已保留原样，详见 errors'));
+		warnings.push(warn('PARTIAL_SUCCESS', 'Some submeshes failed to simplify and were kept as-is; see errors'));
 	}
 
 	return {
@@ -242,13 +242,13 @@ function mergeByMaterial(doc: Document, infos: PrimitiveInfo[], warnings: Report
 		}
 	}
 	if (mergedAny) {
-		warnings.push(warn('MATERIALS_MERGED', '--merge 模式：同材质子网格已合并处理（材质保持不丢）'));
+		warnings.push(warn('MATERIALS_MERGED', '--merge mode: same-material submeshes merged and processed together (materials kept)'));
 	}
 	if (fallbackGroups > 0) {
 		warnings.push(
 			warn(
 				'MERGE_INCOMPATIBLE_FALLBACK',
-				`--merge：${fallbackGroups} 组同材质子网格因顶点属性不兼容无法合并，已回退逐子网格处理（几何与材质不受影响）`,
+				`--merge: ${fallbackGroups} group(s) of same-material submeshes could not merge due to incompatible vertex attributes; fell back to per-submesh processing (geometry and materials unaffected)`,
 			),
 		);
 	}

@@ -28,14 +28,14 @@ def convert_file(
 ) -> Dict[str, Any]:
     to = to.lower().lstrip(".")
     if to not in SUPPORTED:
-        raise param_conflict(f"目标格式不支持: {to}（支持 {', '.join(sorted(SUPPORTED))}）")
+        raise param_conflict(f"Unsupported target format: {to} (supported: {', '.join(sorted(SUPPORTED))})")
 
     import os
 
     if os.path.abspath(output_path) == os.path.abspath(input_path):
-        raise param_conflict(f"输出路径与输入相同: {output_path}")
+        raise param_conflict(f"Output path equals input: {output_path}")
     if os.path.exists(output_path) and not overwrite:
-        raise param_conflict(f"输出已存在: {output_path}（默认不覆盖；确认覆盖请加 --overwrite）")
+        raise param_conflict(f"Output already exists: {output_path} (not overwritten by default; pass --overwrite to replace)")
 
     ext = Path(input_path).suffix.lower()
     warnings = []
@@ -44,16 +44,16 @@ def convert_file(
         if up_axis == "auto":
             det = step_svc.detect_up_axis(input_path)
             if det["resolved"] is None:
-                cands = "；".join(f"{c['axis']}: {c['note']}" for c in det["candidates"]) or "无可用平面特征"
+                cands = "; ".join(f"{c['axis']}: {c['note']}" for c in det["candidates"]) or "no usable plane features"
                 raise param_conflict(
-                    f"--up-axis auto 无法判定朝上轴：{det['evidence']}。候选参考：{cands}。"
-                    "请用 --up-axis x|y|z（可加 - 前缀反向）显式指定"
+                    f"--up-axis auto could not resolve the up axis: {det['evidence']}. Candidates: {cands}. "
+                    "Pass --up-axis x|y|z explicitly (a leading - flips direction)"
                 )
             up_axis = str(det["resolved"])
             auto_info = det
         groups, _bbox = step_svc.mesh_step_groups(input_path, resolution)
         if not groups:
-            raise ValueError("STEP 文件未生成任何三角面，可能不包含实体几何或文件已损坏")
+            raise ValueError("STEP file produced no triangles; the file may contain no solid geometry or be corrupt")
         scene = step_svc.groups_to_scene(groups, up_axis)
         _export(scene, output_path, to)
         total_v, total_f = step_svc.scene_totals(scene)
@@ -66,8 +66,9 @@ def convert_file(
             warnings.append(
                 warn(
                     "ORPHAN_GEOMETRY_ATTACHED",
-                    f"输入含 {len(attached)} 个未挂载进场景图的孤儿几何（多 scene GLB 的非默认 scene），"
-                    f"已显式挂载防止导出丢失: {', '.join(attached[:8])}{'…' if len(attached) > 8 else ''}",
+                    f"Input contains {len(attached)} orphan geometries not mounted in the scene graph "
+                    f"(non-default scenes of a multi-scene GLB); attached explicitly to prevent loss on export: "
+                    f"{', '.join(attached[:8])}{'…' if len(attached) > 8 else ''}",
                 )
             )
         _export(scene, output_path, to)
@@ -75,7 +76,7 @@ def convert_file(
 
     if total_f == 0:
         warnings.append(
-            warn("EMPTY_SCENE_OUTPUT", "输入为空场景（0 面），产物是同格式的合法空文件")
+            warn("EMPTY_SCENE_OUTPUT", "Input is an empty scene (0 faces); the output is a valid empty file of the same format")
         )
 
     return {
@@ -83,7 +84,7 @@ def convert_file(
         "vertices": total_v,
         "faces": total_f,
         "warnings": warnings,
-        "tier_note": f"trimesh 导出 {to}" + ("；STEP 经 OCC 网格化" if ext in {".step", ".stp"} else ""),
+        "tier_note": f"trimesh export to {to}" + ("; STEP meshed via OCC" if ext in {".step", ".stp"} else ""),
         **({"up_axis_resolved": auto_info["resolved"], "up_axis_evidence": auto_info["evidence"]} if auto_info else {}),
     }
 

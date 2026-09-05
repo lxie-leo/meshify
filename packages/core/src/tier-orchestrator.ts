@@ -38,16 +38,16 @@ export const DEFAULT_TIER_ENV: TierEnv = {
 };
 
 export const TIER1_INSTALL_GUIDE = [
-	'Tier1（Python 增强内核）未就绪。安装步骤：',
-	'  1) 安装 uv（单文件安装器，不污染系统）：',
+	'Tier1 (Python augmentation kernel) is not ready. Install steps:',
+	'  1) Install uv (single-file installer, nothing added to system paths):',
 	'     Windows:  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"',
 	'     macOS/Linux:  curl -LsSf https://astral.sh/uv/install.sh | sh',
-	'     （或直接运行: meshify doctor --install-uv）',
-	'  2) 同步 Python 内核依赖：',
+	'     (or simply run: meshify doctor --install-uv)',
+	'  2) Sync the Python kernel dependencies:',
 	'     cd packages-py/kernel-py && uv sync',
-	'  3) 国内网络建议先配置镜像：',
+	'  3) On slow links to PyPI (mainland China), configure a mirror first:',
 	'     set UV_DEFAULT_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple',
-	'     （或阿里云 https://mirrors.aliyun.com/pypi/simple/）',
+	'     (or Aliyun https://mirrors.aliyun.com/pypi/simple/)',
 ].join('\n');
 
 export interface TierDecision {
@@ -82,8 +82,8 @@ export function decideTier(opts: {
 				error: {
 					code: EXIT_EXECUTOR_UNAVAILABLE,
 					message:
-						`输入为 ${opts.format.toUpperCase()}（CAD B-rep），只有 Tier1 (Python/gmsh) 能解析，` +
-						'--tier ts 无法执行。请改用 --tier auto 或 --tier py（需先安装 Tier1）。',
+						`Input is ${opts.format.toUpperCase()} (CAD B-rep); only Tier1 (Python/gmsh) can parse it, ` +
+						'--tier ts cannot run it. Use --tier auto or --tier py instead (Tier1 must be installed).',
 				},
 				installGuide: TIER1_INSTALL_GUIDE,
 			};
@@ -104,8 +104,8 @@ export function decideTier(opts: {
 			warnings: [
 				warn(
 					'SKIN_ANIMATION_PRESERVED',
-					'输入包含 skin/蒙皮/动画/morph，已自动改用 Tier0 (gltf-transform) 执行：' +
-						'Tier1 的 trimesh 管线加载即丢失动画/蒙皮，Tier0 操作 glTF 场景图本身可结构性保留。',
+					'Input contains skin/skeletal animation/morph targets; automatically switched to Tier0 (gltf-transform): ' +
+						'the Tier1 trimesh pipeline drops animation/skinning on load, while Tier0 operates on the glTF scene graph itself and preserves them structurally.',
 				),
 			],
 			error: null,
@@ -124,7 +124,7 @@ export function decideTier(opts: {
 			warnings: [],
 			error: {
 				code: EXIT_EXECUTOR_UNAVAILABLE,
-				message: `Tier1 未就绪（uv=${opts.env.uv}, kernel=${opts.env.kernelReady}），${opts.format.toUpperCase()} 转换无 Tier0 回退路径。`,
+				message: `Tier1 not ready (uv=${opts.env.uv}, kernel=${opts.env.kernelReady}); ${opts.format.toUpperCase()} conversion has no Tier0 fallback path.`,
 			},
 			installGuide: TIER1_INSTALL_GUIDE,
 		};
@@ -135,8 +135,8 @@ export function decideTier(opts: {
 			warn(
 				'TIER_DOWNGRADED',
 				opts.pref === 'py'
-					? '显式要求的 Tier1 (Python) 未就绪，已降级为 Tier0 (TS/WASM) 执行。质量差异见 references/tiering.md。'
-					: 'Tier1 未就绪，已用 Tier0 (TS/WASM) 执行。',
+					? 'The explicitly requested Tier1 (Python) is not ready; degraded to Tier0 (TS/WASM). Quality differences: references/tiering.md.'
+					: 'Tier1 not ready; ran with Tier0 (TS/WASM) instead.',
 			),
 		],
 		error: null,

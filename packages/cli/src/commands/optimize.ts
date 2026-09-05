@@ -36,14 +36,14 @@ export function registerOptimize(program: Command): void {
 	addCommonOptions(
 		program
 			.command('optimize')
-			.description('Web 交付一键优化：去重/修剪 + 可选简化 + 贴图压缩 + meshopt|draco 几何压缩')
-			.argument('<input>', '输入模型（glb/gltf/obj/stl/ply）')
-			.option('--ratio <n>', '简化保留面比例（缺省 = 不简化）')
-			.option('--error <n>', '简化误差上限（归一化，默认 0.01）', '0.01')
-			.option('--compression <codec>', '几何压缩: meshopt | draco | none（默认 meshopt）', 'meshopt')
-			.option('--texture-format <fmt>', '贴图格式: webp | jpeg | png | none（默认 webp；none = 不动贴图）', 'webp')
-			.option('--texture-size <n>', '贴图最长边上限（超出自动降采样，坑 11）')
-			.option('--min-faces <n>', '小于该面数的子网格跳过简化（默认 200）', '200'),
+			.description('One-command web-delivery optimization: dedup/prune + optional simplification + texture compression + meshopt|draco geometry compression')
+			.argument('<input>', 'input model (glb/gltf/obj/stl/ply)')
+			.option('--ratio <n>', 'fraction of faces kept when simplifying (omitted = no simplification)')
+			.option('--error <n>', 'simplification error bound (normalized, default 0.01)', '0.01')
+			.option('--compression <codec>', 'geometry compression: meshopt | draco | none (default meshopt)', 'meshopt')
+			.option('--texture-format <fmt>', 'texture format: webp | jpeg | png | none (default webp; none = leave textures untouched)', 'webp')
+			.option('--texture-size <n>', 'texture max edge length (downsampled automatically beyond it, pitfall 11)')
+			.option('--min-faces <n>', 'skip simplifying submeshes below this face count (default 200)', '200'),
 	).action(withFailureManifest('optimize', 'optimized', async (input: string, cmdOpts: Record<string, unknown>) => {
 		const opts = cmdOpts as GlobalOptions & Record<string, unknown>;
 		const startedAt = Date.now();
@@ -52,11 +52,11 @@ export function registerOptimize(program: Command): void {
 
 		const codec = String(opts.compression ?? 'meshopt').toLowerCase();
 		if (codec !== 'meshopt' && codec !== 'draco' && codec !== 'none') {
-			throw new MeshifyError(EXIT_PARAM_CONFLICT, `--compression 只接受 meshopt | draco | none，收到: ${opts.compression}`);
+			throw new MeshifyError(EXIT_PARAM_CONFLICT, `--compression only accepts meshopt | draco | none, got: ${opts.compression}`);
 		}
 		const texFmtRaw = String(opts.textureFormat ?? 'webp').toLowerCase();
 		if (!['webp', 'jpeg', 'png', 'none'].includes(texFmtRaw)) {
-			throw new MeshifyError(EXIT_PARAM_CONFLICT, `--texture-format 只接受 webp | jpeg | png | none，收到: ${opts.textureFormat}`);
+			throw new MeshifyError(EXIT_PARAM_CONFLICT, `--texture-format only accepts webp | jpeg | png | none, got: ${opts.textureFormat}`);
 		}
 
 		const params: Record<string, unknown> = {
@@ -73,13 +73,13 @@ export function registerOptimize(program: Command): void {
 		const route = await routeTier('optimize', input, format, opts, { params, op: 'optimized' });
 		if (route.handled) return;
 
-		progress('读取输入…');
+		progress('Loading input…');
 		const loaded = await loadInput(input, format);
 		assertResourceLimits(loaded.bytes, loaded.inputInfo.faces, { force: !!opts.force });
 		assertProcessableGeometry(loaded.inputInfo, 'optimize');
 		const beforeBytes = opts.previewHtml ? await documentToGlbBytes(loaded.doc) : null;
 
-		progress('优化管线执行中…');
+		progress('Running the optimize pipeline…');
 		const result = await optimizeDocument(loaded.doc, {
 			ratio: params.ratio as number | undefined,
 			error: params.error as number,
@@ -88,7 +88,7 @@ export function registerOptimize(program: Command): void {
 			textureSize: params.max_texture_size as number | undefined,
 			codec: codec as OptimizeCodec,
 		});
-		progressDone(`优化完成 ${result.facesBefore} → ${result.facesAfter} 面（codec=${result.codecApplied}）`);
+		progressDone(`Optimize done: ${result.facesBefore} → ${result.facesAfter} faces (codec=${result.codecApplied})`);
 
 		const om = new OutputManager(input, { overwrite: !!opts.overwrite, explicit: opts.output });
 		const outPath = om.claim(om.file('optimized', 'glb'));
@@ -100,11 +100,11 @@ export function registerOptimize(program: Command): void {
 		const files = [fileEntryOf(outPath, 'asset')];
 
 		if (opts.previewHtml && beforeBytes) {
-			progress('生成预览页…');
+			progress('Generating preview page…');
 			const htmlPath = om.claim(om.previewPath(outPath));
 			writePreviewHtml({
-				before: [{ label: '原始', bytes: beforeBytes }],
-				after: [{ label: '优化产物', bytes: readBytes(outPath) }],
+				before: [{ label: 'Input', bytes: beforeBytes }],
+				after: [{ label: 'Optimized output', bytes: readBytes(outPath) }],
 				report: draftOf({
 					command: 'optimize',
 					input: loaded.inputInfo,
@@ -117,7 +117,7 @@ export function registerOptimize(program: Command): void {
 				outPath: htmlPath,
 			});
 			files.push(fileEntryOf(htmlPath, 'preview'));
-			progressDone(`预览页 ${htmlPath}`);
+			progressDone(`Preview page: ${htmlPath}`);
 		}
 
 		emitReport(

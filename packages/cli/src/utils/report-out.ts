@@ -33,8 +33,8 @@ export function emitExistingReport(report: MeshifyReport, opts: EmitOptions): Me
 	if (!validated.ok) {
 		// 契约违约属内部错误：报告照写（排障用），进程 exit 8
 		const detail = validated.errors.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
-		writeReportFile(opts.reportPath, { ...report, errors: [...report.errors, `manifest 未通过 schema 校验: ${detail}`] });
-		throw new MeshifyError(EXIT_INTERNAL, `manifest 未通过 schema 校验（已写入 ${opts.reportPath}）: ${detail}`);
+		writeReportFile(opts.reportPath, { ...report, errors: [...report.errors, `manifest failed schema validation: ${detail}`] });
+		throw new MeshifyError(EXIT_INTERNAL, `manifest failed schema validation (written to ${opts.reportPath}): ${detail}`);
 	}
 	writeReportFile(opts.reportPath, report);
 	if (opts.json) {
@@ -66,44 +66,44 @@ export function emitFailureReport(report: MeshifyReport, opts: EmitOptions): voi
 export function printSummary(report: MeshifyReport, reportPath: string): void {
 	const lines: string[] = [];
 	const tier = report.tool.tier === 'python-uv' ? 'Tier1 python-uv' : 'Tier0 ts-wasm';
-	lines.push(`meshify ${report.command} 完成（${(report.metrics.duration_ms / 1000).toFixed(2)}s，${tier}）`);
+	lines.push(`meshify ${report.command} done (${(report.metrics.duration_ms / 1000).toFixed(2)}s, ${tier})`);
 	lines.push(
-		`  输入  ${report.input.path}（${report.input.format}，${fmtCount(report.input.faces)} 面，${fmtBytes(report.input.bytes)}）`,
+		`  input   ${report.input.path} (${report.input.format}, ${fmtCount(report.input.faces)} faces, ${fmtBytes(report.input.bytes)})`,
 	);
 	if (report.output) {
 		lines.push(
-			`  输出  ${report.output.path}（${fmtCount(report.output.faces)} 面，${fmtBytes(report.output.bytes)}）`,
+			`  output  ${report.output.path} (${fmtCount(report.output.faces)} faces, ${fmtBytes(report.output.bytes)})`,
 		);
 		if (report.metrics.face_reduction !== undefined) {
 			lines.push(
-				`  面数  ${fmtCount(report.input.faces)} → ${fmtCount(report.output.faces)}（保留 ${(
+				`  faces   ${fmtCount(report.input.faces)} → ${fmtCount(report.output.faces)} (${(
 					100 * (1 - report.metrics.face_reduction)
-				).toFixed(1)}%）`,
+				).toFixed(1)}%)`,
 			);
 		}
 		if (report.metrics.byte_reduction !== undefined) {
 			// 正值 = 减小；负值（如绑贴图后变大）显示 +
 			const pct = 100 * report.metrics.byte_reduction;
 			lines.push(
-				`  体积  ${fmtBytes(report.input.bytes)} → ${fmtBytes(report.output.bytes)}（${pct >= 0 ? '-' : '+'}${Math.abs(pct).toFixed(1)}%）`,
+				`  size    ${fmtBytes(report.input.bytes)} → ${fmtBytes(report.output.bytes)} (${pct >= 0 ? '-' : '+'}${Math.abs(pct).toFixed(1)}%)`,
 			);
 		}
 		if (report.metrics.parts) {
-			lines.push(`  部件  ${report.metrics.parts.length} 个`);
+			lines.push(`  parts   ${report.metrics.parts.length}`);
 		}
 		if (report.metrics.lod_levels) {
 			lines.push(
-				`  LOD  ${report.metrics.lod_levels.map((l) => `L${l.level}:${fmtCount(l.faces)}面`).join('，')}`,
+				`  LOD        ${report.metrics.lod_levels.map((l) => `L${l.level}:${fmtCount(l.faces)} faces`).join(', ')}`,
 			);
 		}
 	}
 	for (const w of report.warnings) {
-		lines.push(`  警告  [${w.code}] ${w.message}`);
+		lines.push(`  warn    [${w.code}] ${w.message}`);
 	}
 	for (const e of report.errors) {
-		lines.push(`  错误  ${e}`);
+		lines.push(`  error   ${e}`);
 	}
-	lines.push(`  报告  ${reportPath}`);
+	lines.push(`  report  ${reportPath}`);
 	process.stdout.write(lines.join('\n') + '\n');
 }
 

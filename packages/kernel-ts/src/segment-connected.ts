@@ -73,7 +73,7 @@ export function segmentConnected(soup: Soup, opts: { minFaces?: number } = {}): 
 		warnings.push(
 			warn(
 				'SMALL_PARTS_DROPPED',
-				`已丢弃 ${droppedComponents} 个面数 < ${minFaces} 的碎片连通域（共 ${totalFaceCount - keptFaceCount} 面）`,
+				`${droppedComponents} fragment components with < ${minFaces} faces dropped (${totalFaceCount - keptFaceCount} faces total)`,
 			),
 		);
 	}

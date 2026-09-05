@@ -38,15 +38,15 @@ export function registerSimplify(program: Command): void {
 	addCommonOptions(
 		program
 			.command('simplify')
-			.description('QEM 减面（meshopt WASM）：默认逐子网格处理保材质；面数 < --min-faces 的子网格跳过')
-			.argument('<input>', '输入模型（glb/gltf/obj/stl/ply）')
-			.option('--ratio <n>', '目标保留面比例 (0,1]，默认 0.5')
-			.option('--target-faces <n>', '目标面数（绝对值；与 --ratio 互斥）')
-			.option('--error <n>', '简化误差上限（归一化，默认 0.01；实际误差见 manifest）', '0.01')
-			.option('--no-keep-border', '不锁定边界顶点（开放壳边界可被塌缩）')
-			.option('--merge', '同材质子网格先合并再统一简化（默认逐子网格）')
-			.option('--min-faces <n>', '小于该面数的子网格跳过（默认 200，坑 12）', '200')
-			.option('--aggressiveness <n>', 'Tier1 pyfqmr 语义参数（Tier0 仅回显不使用）', '7'),
+			.description('QEM decimation (meshopt WASM): per-submesh by default to keep materials; submeshes under --min-faces are skipped')
+			.argument('<input>', 'input model (glb/gltf/obj/stl/ply)')
+			.option('--ratio <n>', 'target fraction of faces kept, (0,1], default 0.5')
+			.option('--target-faces <n>', 'target face count (absolute; mutually exclusive with --ratio)')
+			.option('--error <n>', 'simplification error bound (normalized, default 0.01; the actual error is in the manifest)', '0.01')
+			.option('--no-keep-border', 'do not lock border vertices (open-shell borders may collapse)')
+			.option('--merge', 'merge same-material submeshes before simplifying (per-submesh by default)')
+			.option('--min-faces <n>', 'skip submeshes below this face count (default 200, pitfall 12)', '200')
+			.option('--aggressiveness <n>', 'Tier1 pyfqmr semantic parameter (echoed only on Tier0)', '7'),
 	).action(withFailureManifest('simplify', 'simplified', async (input: string, cmdOpts: Record<string, unknown>) => {
 		const opts = cmdOpts as GlobalOptions & Record<string, unknown>;
 		const startedAt = Date.now();
@@ -55,7 +55,7 @@ export function registerSimplify(program: Command): void {
 
 		// 互斥契约：显式 --ratio 与 --target-faces 二选一（缺省 ratio 不算冲突）
 		if (opts.targetFaces !== undefined && opts.ratio !== undefined) {
-			throw new MeshifyError(EXIT_CODES.EXIT_PARAM_CONFLICT, '--ratio 与 --target-faces 互斥，请二选一');
+			throw new MeshifyError(EXIT_CODES.EXIT_PARAM_CONFLICT, '--ratio and --target-faces are mutually exclusive; pick one');
 		}
 
 		const params: Record<string, unknown> = {
@@ -74,14 +74,14 @@ export function registerSimplify(program: Command): void {
 		const route = await routeTier('simplify', input, format, opts, { params, op: 'simplified' });
 		if (route.handled) return;
 
-		progress('读取输入…');
+		progress('Loading input…');
 		const loaded = await loadInput(input, format);
 		assertResourceLimits(loaded.bytes, loaded.inputInfo.faces, { force: !!opts.force });
 		assertProcessableGeometry(loaded.inputInfo, 'simplify');
 		// 预览 before 快照需在内核改动 Document 之前捕获
 		const beforeBytes = opts.previewHtml ? await documentToGlbBytes(loaded.doc) : null;
 
-		progress('QEM 简化中…');
+		progress('Simplifying (QEM)…');
 		const result = await simplifyDocument(loaded.doc, {
 			ratio: params.ratio as number,
 			targetFaces: params.target_faces as number | undefined,
@@ -95,18 +95,18 @@ export function registerSimplify(program: Command): void {
 		const outPath = om.claim(om.file('simplified', 'glb'));
 		om.ensureDirFor(outPath);
 		await writeDocument(loaded.doc, outPath);
-		progressDone(`简化完成 ${result.facesBefore} → ${result.facesAfter} 面`);
+		progressDone(`Simplify done: ${result.facesBefore} → ${result.facesAfter} faces`);
 
 		const stats = await documentStats(loaded.doc);
 		const warnings = [...loaded.warnings, ...route.warnings, ...result.warnings];
 		const files: FileInfo[] = [fileEntryOf(outPath, 'asset')];
 
 		if (opts.previewHtml) {
-			progress('生成预览页…');
+			progress('Generating preview page…');
 			const htmlPath = om.claim(om.previewPath(outPath));
 			writePreviewHtml({
-				before: [{ label: '原始', bytes: beforeBytes! }],
-				after: [{ label: '简化产物', bytes: readBytes(outPath) }],
+				before: [{ label: 'Input', bytes: beforeBytes! }],
+				after: [{ label: 'Simplified output', bytes: readBytes(outPath) }],
 				report: draftOf({
 					command: 'simplify',
 					input: loaded.inputInfo,
@@ -121,7 +121,7 @@ export function registerSimplify(program: Command): void {
 				outPath: htmlPath,
 			});
 			files.push(fileEntryOf(htmlPath, 'preview'));
-			progressDone(`预览页 ${htmlPath}`);
+			progressDone(`Preview page: ${htmlPath}`);
 		}
 
 		emitReport(

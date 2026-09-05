@@ -218,8 +218,8 @@ describe('Agent 工作流 E2E', () => {
 		expect(r.code).toBe(4);
 		// Tier1 失败路径：错误详情在 stdout 的 failure manifest（errors[0]），不在 stderr
 		const err = (r.manifest!.errors ?? [])[0] ?? '';
-		expect(err).toContain('--up-axis auto 无法判定');
-		expect(err).toContain('候选参考');
+		expect(err).toContain('--up-axis auto could not resolve');
+		expect(err).toContain('Candidates');
 	}, 180_000);
 
 	// --up-axis 对非 STEP 输入必须显式拒绝（exit 4），静默忽略会让用户以为朝向已处理
@@ -229,7 +229,7 @@ describe('Agent 工作流 E2E', () => {
 		fs.copyFileSync(FIX('glb/small.glb'), copy);
 		const r = cli(['convert', copy, '--to', 'stl', '--up-axis', 'x', '--json', '--overwrite']);
 		expect(r.code).toBe(4);
-		expect(r.stderr).toContain('--up-axis 仅对 STEP');
+		expect(r.stderr).toContain('--up-axis only applies to STEP');
 	}, 60_000);
 
 	it('segment --mode plane 产出多部件 + 部件指标', () => {

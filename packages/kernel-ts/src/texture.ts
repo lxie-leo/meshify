@@ -49,7 +49,7 @@ export function textureDocument(
 		if (opts.mode === 'uv' && !info.localUvs) {
 			// 模式 uv 但子网格缺 UV：自动补盒式投影（坑资产：绝不静默，写警告）
 			warnings.push(
-				warn('AUTO_BOX_UV_GENERATED', `${info.name}: 无 UV 坐标，已自动生成盒式 UV`, info.name),
+				warn('AUTO_BOX_UV_GENERATED', `${info.name}: no UV coordinates; box UV auto-generated`, info.name),
 			);
 			effectiveMode = 'box';
 		}
@@ -61,7 +61,7 @@ export function textureDocument(
 			warnings.push(
 				warn(
 					'UV_REMAP_APPROXIMATED',
-					`${info.name}: 已有贴图的子网格被重投影，贴图显示区域会改变`,
+					`${info.name}: submesh with an existing texture was reprojected; the displayed texture region will change`,
 					info.name,
 				),
 			);

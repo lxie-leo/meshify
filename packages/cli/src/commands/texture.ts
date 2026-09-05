@@ -39,12 +39,12 @@ export function registerTexture(program: Command): void {
 	addCommonOptions(
 		program
 			.command('texture')
-			.description('UV 投影重生成（planar/cylindrical/spherical/box/uv）+ 可选 --image 绑定 baseColor 贴图')
-			.argument('<input>', '输入模型（glb/gltf/obj/stl/ply）')
-			.option('--map <mode>', '投影模式: planar | cylindrical | spherical | box | uv（必填）')
-			.option('--image <path>', 'baseColor 贴图文件（png/jpeg/webp/…，自动规范化）')
-			.option('--metallic <n>', '覆盖材质金属度 (0-1)')
-			.option('--roughness <n>', '覆盖材质粗糙度 (0-1)'),
+			.description('UV reprojection (planar/cylindrical/spherical/box/uv) + optional --image baseColor binding')
+			.argument('<input>', 'input model (glb/gltf/obj/stl/ply)')
+			.option('--map <mode>', 'projection mode: planar | cylindrical | spherical | box | uv (required)')
+			.option('--image <path>', 'baseColor image file (png/jpeg/webp/…, normalized automatically)')
+			.option('--metallic <n>', 'override material metallic (0-1)')
+			.option('--roughness <n>', 'override material roughness (0-1)'),
 	).action(withFailureManifest('texture', 'textured', async (input: string, cmdOpts: Record<string, unknown>) => {
 		const opts = cmdOpts as GlobalOptions & Record<string, unknown>;
 		const startedAt = Date.now();
@@ -55,7 +55,7 @@ export function registerTexture(program: Command): void {
 		if (!['planar', 'cylindrical', 'spherical', 'box', 'uv'].includes(mode)) {
 			throw new MeshifyError(
 				EXIT_PARAM_CONFLICT,
-				`--map 必须是 planar | cylindrical | spherical | box | uv，收到: ${opts.map ?? '(缺失)'}`,
+				`--map must be planar | cylindrical | spherical | box | uv, got: ${opts.map ?? '(missing)'}`,
 			);
 		}
 		const params: Record<string, unknown> = { map: mode };
@@ -68,25 +68,25 @@ export function registerTexture(program: Command): void {
 		if (opts.image !== undefined && mode === 'uv') {
 			throw new MeshifyError(
 				EXIT_PARAM_CONFLICT,
-				'--map uv 表示保留现有 UV，与 --image（要求重投影绑定贴图）语义冲突；请改用其他投影模式',
+				'--map uv means keeping the existing UVs, which conflicts with --image (reprojection + texture binding); use another projection mode',
 			);
 		}
 
 		const route = await routeTier('texture', input, format, opts, { params, op: 'textured' });
 		if (route.handled) return;
 
-		progress('读取输入…');
+		progress('Loading input…');
 		const loaded = await loadInput(input, format);
 		assertResourceLimits(loaded.bytes, loaded.inputInfo.faces, { force: !!opts.force });
 		assertProcessableGeometry(loaded.inputInfo, 'texture');
 		const beforeBytes = opts.previewHtml ? await documentToGlbBytes(loaded.doc) : null;
 
-		progress(`UV 投影（${mode}）…`);
+		progress(`UV projection (${mode})…`);
 		const result = textureDocument(loaded.doc, { mode: mode as TextureMode });
 		const warnings = [...loaded.warnings, ...route.warnings, ...result.warnings];
 
 		if (opts.image !== undefined) {
-			progress('绑定贴图…');
+			progress('Binding texture…');
 			// 必须 await：贴图读取/解码失败要在命令内抛出（exit 2 + manifest），
 			// 漏掉会变成 unhandled rejection → 进程裸崩 exit 1（契约外）
 			await attachBaseColorImage(loaded.doc, String(opts.image), mode, warnings);
@@ -97,7 +97,7 @@ export function registerTexture(program: Command): void {
 				if (params.roughness !== undefined) mat.setRoughnessFactor(params.roughness as number);
 			}
 		}
-		progressDone(`UV 重生成完成（${result.meshes.length} 子网格）`);
+		progressDone(`UV regeneration done (${result.meshes.length} submeshes)`);
 
 		const om = new OutputManager(input, { overwrite: !!opts.overwrite, explicit: opts.output });
 		const outPath = om.claim(om.file('textured', 'glb'));
@@ -108,11 +108,11 @@ export function registerTexture(program: Command): void {
 		const files = [fileEntryOf(outPath, 'asset')];
 
 		if (opts.previewHtml && beforeBytes) {
-			progress('生成预览页…');
+			progress('Generating preview page…');
 			const htmlPath = om.claim(om.previewPath(outPath));
 			writePreviewHtml({
-				before: [{ label: '原始', bytes: beforeBytes }],
-				after: [{ label: '贴图产物', bytes: readBytes(outPath) }],
+				before: [{ label: 'Input', bytes: beforeBytes }],
+				after: [{ label: 'Textured output', bytes: readBytes(outPath) }],
 				report: draftOf({
 					command: 'texture',
 					input: loaded.inputInfo,
@@ -125,7 +125,7 @@ export function registerTexture(program: Command): void {
 				outPath: htmlPath,
 			});
 			files.push(fileEntryOf(htmlPath, 'preview'));
-			progressDone(`预览页 ${htmlPath}`);
+			progressDone(`Preview page: ${htmlPath}`);
 		}
 
 		emitReport(
@@ -156,7 +156,7 @@ async function attachBaseColorImage(
 	} catch (err) {
 		throw new MeshifyError(
 			EXIT_INPUT_UNREADABLE,
-			`--image 贴图不可读: ${imagePath}（${err instanceof Error ? err.message : String(err)}）`,
+			`--image texture unreadable: ${imagePath} (${err instanceof Error ? err.message : String(err)})`,
 		);
 	}
 	let normalized: Awaited<ReturnType<typeof normalizeImage>>;
@@ -165,14 +165,14 @@ async function attachBaseColorImage(
 	} catch (err) {
 		throw new MeshifyError(
 			EXIT_INPUT_UNREADABLE,
-			`--image 不是可解码的图片文件: ${imagePath}（${err instanceof Error ? err.message : String(err)}）`,
+			`--image is not a decodable image file: ${imagePath} (${err instanceof Error ? err.message : String(err)})`,
 		);
 	}
 	if (normalized.converted) {
 		warnings.push(
 			warn(
 				'TEXTURE_FORMAT_CONVERTED',
-				`贴图 ${path.basename(imagePath)} 非 PNG/JPEG，已规范化转 PNG（glTF 核心规范只内建这两种位图格式）`,
+				`Texture ${path.basename(imagePath)} is not PNG/JPEG; normalized to PNG (glTF core embeds only those two bitmap formats)`,
 			),
 		);
 	}

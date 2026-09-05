@@ -78,7 +78,7 @@ export async function loadInput(inputPath: string, format: InputFormat): Promise
 					warnings.push(
 						warn(
 							'FORMAT_CONTENT_MISMATCH',
-							`输入 ${path.basename(inputPath)} 按扩展名当 OBJ 处理，但内容是二进制（解析出 ${doc.getRoot().listMeshes().length} 个子网格）；文件可能实际是其它格式改名而来`,
+							`Input ${path.basename(inputPath)} treated as OBJ by extension, but the content is binary (${doc.getRoot().listMeshes().length} submesh(es) parsed); the file may be another format renamed`,
 						),
 					);
 				}
@@ -94,14 +94,14 @@ export async function loadInput(inputPath: string, format: InputFormat): Promise
 				// STEP 只能经 Tier1（convert 命令在 tier 仲裁处已分流，此处不可达）
 				throw new MeshifyError(
 					EXIT_INTERNAL,
-					'STEP 输入必须经 Tier1 (Python/gmsh) 处理，Tier0 加载路径不可达。',
+					'STEP input must go through Tier1 (Python/gmsh); the Tier0 load path is unreachable.',
 				);
 		}
 	} catch (err) {
 		if (err instanceof MeshifyError) throw err;
 		throw new MeshifyError(
 			EXIT_INPUT_UNREADABLE,
-			`输入解析失败（${path.basename(inputPath)}，格式 ${format}）: ${err instanceof Error ? err.message : String(err)}`,
+			`Input parse failed (${path.basename(inputPath)}, format ${format}): ${err instanceof Error ? err.message : String(err)}`,
 		);
 	}
 
@@ -124,7 +124,7 @@ export function assertProcessableGeometry(inputInfo: InputInfo, command: string)
 	if (inputInfo.faces > 0) return;
 	throw new MeshifyError(
 		EXIT_ALGORITHM_FAILED,
-		`输入不含任何三角面，${command} 无可处理几何。可先 inspect 查看文件结构；空场景请检查导出设置。`,
+		`Input contains no triangles; ${command} has no geometry to process. Run inspect to check the file structure; for empty scenes, review the export settings.`,
 	);
 }
 
@@ -134,7 +134,7 @@ function readText(p: string): string {
 	} catch (err) {
 		throw new MeshifyError(
 			EXIT_INPUT_UNREADABLE,
-			`无法读取输入: ${p}（${err instanceof Error ? err.message : String(err)}）`,
+			`Cannot read input: ${p} (${err instanceof Error ? err.message : String(err)})`,
 		);
 	}
 }
@@ -201,7 +201,7 @@ export function parseVec3(raw: string, name: string): [number, number, number] {
 		.split(',')
 		.map((s) => Number(s.trim()));
 	if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) {
-		throw new MeshifyError(EXIT_PARAM_CONFLICT, `--${name} 需要 "x,y,z" 形式的三个有限数字，收到: ${raw}`);
+		throw new MeshifyError(EXIT_PARAM_CONFLICT, `--${name} needs three finite numbers in the form "x,y,z", got: ${raw}`);
 	}
 	return [parts[0], parts[1], parts[2]];
 }
@@ -237,22 +237,22 @@ export interface CommonCommandFlags {
 export function addCommonOptions(cmd: Command, flags: CommonCommandFlags = {}): Command {
 	let c = cmd;
 	if (!flags.noOutput) {
-		c = c.option('-o, --output <path>', '输出路径（默认 <input>.meshify/<name>.<op>.<ext>）');
+		c = c.option('-o, --output <path>', 'output path (default <input>.meshify/<name>.<op>.<ext>)');
 	}
 	return c
-		.option('--report <path>', 'manifest 路径（默认 <input>.meshify/<name>.<op>.report.json，工具自有日志可自动覆盖）')
-		.option('--tier <mode>', '内核选择: auto | ts | py（默认 auto；STEP 必须 py）', 'auto')
-		.option('--preview-html', '生成 before/after 对比预览页（自包含单文件 HTML）')
-		.option('--overwrite', '覆盖已存在的输出产物（输入文件任何情况下不被覆盖）')
-		.option('--json', 'stdout 输出完整 manifest JSON（供 Agent 消费）')
-		.option('--force', '跳过面数/字节资源上限防护（大模型一次性处理）');
+		.option('--report <path>', "manifest path (default <input>.meshify/<name>.<op>.report.json; the tool's own logs auto-overwrite)")
+		.option('--tier <mode>', 'kernel selection: auto | ts | py (default auto; STEP requires py)', 'auto')
+		.option('--preview-html', 'generate a before/after comparison preview page (self-contained single-file HTML)')
+		.option('--overwrite', 'overwrite existing output artifacts (the input file is never overwritten)')
+		.option('--json', 'write the full manifest JSON to stdout (for agents to consume)')
+		.option('--force', 'skip the face-count/byte resource guards (one-shot processing of large models)');
 }
 
 /** 解析 --tier（非法值 = exit 4）。 */
 export function parseTierPref(raw: unknown): 'auto' | 'ts' | 'py' {
 	const v = String(raw ?? 'auto');
 	if (v !== 'auto' && v !== 'ts' && v !== 'py') {
-		throw new MeshifyError(EXIT_PARAM_CONFLICT, `--tier 只接受 auto | ts | py，收到: ${v}`);
+		throw new MeshifyError(EXIT_PARAM_CONFLICT, `--tier only accepts auto | ts | py, got: ${v}`);
 	}
 	return v;
 }
@@ -343,13 +343,13 @@ function failureReport(
 export function parseNumber(raw: unknown, name: string, opts: { min?: number; max?: number } = {}): number {
 	const n = Number(raw);
 	if (!Number.isFinite(n)) {
-		throw new MeshifyError(EXIT_PARAM_CONFLICT, `--${name} 需要数字，收到: ${raw}`);
+		throw new MeshifyError(EXIT_PARAM_CONFLICT, `--${name} needs a number, got: ${raw}`);
 	}
 	if (opts.min !== undefined && n < opts.min) {
-		throw new MeshifyError(EXIT_PARAM_CONFLICT, `--${name} 必须 ≥ ${opts.min}，收到: ${n}`);
+		throw new MeshifyError(EXIT_PARAM_CONFLICT, `--${name} must be ≥ ${opts.min}, got: ${n}`);
 	}
 	if (opts.max !== undefined && n > opts.max) {
-		throw new MeshifyError(EXIT_PARAM_CONFLICT, `--${name} 必须 ≤ ${opts.max}，收到: ${n}`);
+		throw new MeshifyError(EXIT_PARAM_CONFLICT, `--${name} must be ≤ ${opts.max}, got: ${n}`);
 	}
 	return n;
 }
@@ -357,7 +357,7 @@ export function parseNumber(raw: unknown, name: string, opts: { min?: number; ma
 export function parseInteger(raw: unknown, name: string, opts: { min?: number; max?: number } = {}): number {
 	const n = parseNumber(raw, name, opts);
 	if (!Number.isInteger(n)) {
-		throw new MeshifyError(EXIT_PARAM_CONFLICT, `--${name} 需要整数，收到: ${raw}`);
+		throw new MeshifyError(EXIT_PARAM_CONFLICT, `--${name} needs an integer, got: ${raw}`);
 	}
 	return n;
 }

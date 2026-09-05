@@ -19,12 +19,12 @@ export function assertResourceLimits(inputBytes: number, totalFaces: number, opt
 	const maxBytes = opts.maxBytes ?? DEFAULT_MAX_BYTES;
 	if (inputBytes > maxBytes || totalFaces > maxFaces) {
 		const reasons: string[] = [];
-		if (inputBytes > maxBytes) reasons.push(`文件 ${(inputBytes / 1024 / 1024).toFixed(1)}MB > ${(maxBytes / 1024 / 1024) | 0}MB`);
-		if (totalFaces > maxFaces) reasons.push(`面数 ${totalFaces.toLocaleString()} > ${maxFaces.toLocaleString()}`);
+		if (inputBytes > maxBytes) reasons.push(`file ${(inputBytes / 1024 / 1024).toFixed(1)}MB > ${(maxBytes / 1024 / 1024) | 0}MB`);
+		if (totalFaces > maxFaces) reasons.push(`faces ${totalFaces.toLocaleString()} > ${maxFaces.toLocaleString()}`);
 		throw new MeshifyError(
 			EXIT_RESOURCE_LIMIT,
-			`资源超限：${reasons.join('，')}。建议：先用 inspect 评估、按子网格分块处理（segment connected 拆件后逐件处理），` +
-				`或降低目标面数/纹理分辨率；确认要一次性处理请加 --force。`,
+			`Resource limit exceeded: ${reasons.join('; ')}. Suggestion: evaluate with inspect first and work per-submesh in batches ` +
+				`(segment connected, then process part by part), or lower the target face count/texture resolution; to process in one shot, pass --force.`,
 		);
 	}
 }

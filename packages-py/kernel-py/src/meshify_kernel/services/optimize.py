@@ -31,8 +31,8 @@ def optimize_file(
         warnings.append(
             warn(
                 "TIER_DOWNGRADED",
-                f"几何压缩 codec={compression} 需要 Tier0 (meshoptimizer/draco WASM)；"
-                "Tier1 路径输出未压缩 GLB。需要压缩时请去掉 --tier py 让路由走 Tier0。",
+                f"Geometry compression codec={compression} requires Tier0 (meshoptimizer/draco WASM); "
+                "the Tier1 path outputs an uncompressed GLB. Drop --tier py to let routing pick Tier0 when compression is needed.",
             )
         )
 
@@ -40,8 +40,8 @@ def optimize_file(
         warnings.append(
             warn(
                 "TEXTURE_DOWNSCALED",
-                f"贴图处理 texture-format={texture_format}：glTF 核心仅内建 PNG/JPEG，"
-                "Tier1 统一规范化为 PNG" + (f"，最长边上限 {max_texture_size}" if max_texture_size else ""),
+                f"Texture handling texture-format={texture_format}: glTF core only embeds PNG/JPEG natively; "
+                "Tier1 normalizes to PNG" + (f", longest edge capped at {max_texture_size}" if max_texture_size else ""),
             )
         )
 
@@ -59,7 +59,7 @@ def optimize_file(
         result = _reexport(input_path, output_path, texture_format, max_texture_size, overwrite)
 
     result["warnings"] = warnings + result.get("warnings", [])
-    result["tier_note"] = "Tier1 optimize：几何压缩/贴图 WebP 属 Tier0 能力，此路径为未压缩基线"
+    result["tier_note"] = "Tier1 optimize: geometry compression / texture WebP are Tier0 capabilities; this path is an uncompressed baseline"
     return result
 
 

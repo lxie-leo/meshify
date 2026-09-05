@@ -34,7 +34,7 @@ def simplify_file(
     try:
         import pyfqmr
     except ImportError as e:  # pragma: no cover
-        raise ImportError("模型轻量化需要 pyfqmr（cd packages-py/kernel-py && uv sync）") from e
+        raise ImportError("Simplification requires pyfqmr (cd packages-py/kernel-py && uv sync)") from e
 
     import trimesh
 
@@ -46,7 +46,7 @@ def simplify_file(
         if isinstance(g, trimesh.Trimesh) and len(g.faces) > 0
     ]
     if not meshes:
-        raise ValueError("模型不包含三角面，无法轻量化")
+        raise ValueError("Model contains no triangles; nothing to simplify")
 
     warnings: List[Dict[str, Any]] = []
     original_faces = sum(len(g.faces) for _, g in meshes)
@@ -56,7 +56,7 @@ def simplify_file(
             warnings.append(
                 warn(
                     "SMALL_MESH_SKIPPED",
-                    f"{name}: {len(geo.faces)} < min-faces {min_faces}，跳过简化原样保留",
+                    f"{name}: {len(geo.faces)} < min-faces {min_faces}, skipped and kept as-is",
                     mesh=name,
                 )
             )
@@ -94,7 +94,7 @@ def simplify_file(
             warnings.append(
                 warn(
                     "MATERIAL_DEGRADED_TO_BASE_COLOR",
-                    f"{name}: 源网格无可复用材质（纯色/顶点色视觉），产物材质回退默认",
+                    f"{name}: source mesh has no reusable material (solid-color/vertex-color visual); output material falls back to default",
                     mesh=name,
                 )
             )
@@ -103,7 +103,7 @@ def simplify_file(
                 warnings.append(
                     warn(
                         "MATERIAL_DEGRADED_TO_BASE_COLOR",
-                        f"{name}: UV 无法重映射到简化后顶点，材质降级为仅 baseColor 标量（贴图剥离）",
+                        f"{name}: UVs could not be remapped onto the simplified vertices; material degraded to baseColor scalar only (textures stripped)",
                         mesh=name,
                     )
                 )
@@ -111,7 +111,7 @@ def simplify_file(
                 warnings.append(
                     warn(
                         "UV_REMAP_APPROXIMATED",
-                        f"{name}: 简化塌缩点 UV 按最近三角面重心插值重映射（近似，极端形变区可能拉伸）",
+                        f"{name}: UVs of collapsed vertices remapped by nearest-face barycentric interpolation (approximate; heavily deformed regions may stretch)",
                         mesh=name,
                     )
                 )
@@ -119,7 +119,7 @@ def simplify_file(
             mat = getattr(new_mesh.visual, "material", None)
             if mat is not None and hasattr(type(mat), "doubleSided"):
                 mat.doubleSided = True
-                warnings.append(warn("DOUBLE_SIDED_FORCED", f"{name}: 产物材质强制 doubleSided（开口壳防背面剔除）", mesh=name))
+                warnings.append(warn("DOUBLE_SIDED_FORCED", f"{name}: output material forced doubleSided (open shells vs. backface culling)", mesh=name))
 
         if has_texture:
             new_uv = getattr(new_mesh.visual, "uv", None)

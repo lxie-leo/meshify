@@ -50,11 +50,11 @@ def run_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     output: Optional[Dict[str, Any]] = None
     metrics: Dict[str, Any] = {}
     if not input_path or not os.path.isfile(input_path):
-        errors.append(f"输入不可读: {input_path}")
+        errors.append(f"Input unreadable: {input_path}")
         exit_code = EXIT_INPUT_UNREADABLE
     elif os.path.getsize(input_path) > _MAX_INPUT_BYTES and not payload.get("force"):
         errors.append(
-            f"输入超过 Tier1 资源上限（{os.path.getsize(input_path) / 1024 / 1024:.0f} MB > 512 MB）；--force 一次性处理"
+            f"Input exceeds the Tier1 resource limit ({os.path.getsize(input_path) / 1024 / 1024:.0f} MB > 512 MB); pass --force for a one-shot run"
         )
         exit_code = EXIT_RESOURCE_LIMIT
 
@@ -65,7 +65,7 @@ def run_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
             # 几何命令空输入统一拦截（inspect/convert 是结构操作，不拦）：
             # 与 Tier0 侧行为对齐——0 面 = exit 6，且在任何产物写盘前失败
             if command in {"simplify", "segment", "texture", "lod", "optimize"} and input_info.get("faces", 0) == 0:
-                raise KernelError(EXIT_ALGORITHM_FAILED, "输入不含任何三角面，几何命令无可处理几何")
+                raise KernelError(EXIT_ALGORITHM_FAILED, "Input contains no triangles; geometry commands have nothing to process")
 
             # 输出目录兜底创建（CLI 会预建；直接 payload 调用时同样成立）
             if output_path:
@@ -85,7 +85,7 @@ def run_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
             }
             handler = handlers.get(command)
             if handler is None:
-                raise KernelError(EXIT_PARAM_CONFLICT, f"未知命令: {command}")
+                raise KernelError(EXIT_PARAM_CONFLICT, f"Unknown command: {command}")
             if command == "inspect":
                 result = handler(input_path, params, None, None, overwrite)
             else:
@@ -106,24 +106,24 @@ def run_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
                     warnings.append(
                         warn(
                             "UP_AXIS_AUTO",
-                            f"--up-axis auto 判定朝上轴为 {auto_resolved}：{auto_evidence}。"
-                            "产物已按该轴旋转为 glTF 规范 Y-up（几何形状不变）",
+                            f"--up-axis auto resolved the up axis to {auto_resolved}: {auto_evidence}. "
+                            "Output rotated to the glTF-required Y-up along that axis (geometry unchanged)",
                         )
                     )
                     up_axis = str(auto_resolved)
                 if up_axis == "y":
-                    msg = "STEP 按 --up-axis y 处理：源坐标已视为 Y-up（glTF 规范即 Y-up），未做旋转"
+                    msg = "STEP treated as --up-axis y: source coordinates are already Y-up (glTF requires Y-up), no rotation applied"
                 elif up_axis == "z" and auto_resolved is not None:
-                    msg = "STEP 朝上轴经 auto 判定为 z，产物已旋转为 glTF 规范 Y-up（几何形状不变，仅朝向规范化）"
+                    msg = "STEP up axis resolved to z by auto; output rotated to the glTF-required Y-up (geometry unchanged, orientation normalized only)"
                 elif up_axis == "z":
                     msg = (
-                        "STEP 坐标按 CAD 惯例视为 Z-up，产物已旋转为 glTF 规范 Y-up"
-                        "（几何形状不变，仅朝向规范化；若部件在源文件中并非 Z 朝上，用 --up-axis 指定）"
+                        "STEP coordinates treated as Z-up per CAD convention; output rotated to the glTF-required Y-up"
+                        " (geometry unchanged, orientation normalized only; if the part does not sit Z-up in the source file, pass --up-axis)"
                     )
                 else:
                     msg = (
-                        f"STEP 按 --up-axis {up_axis} 处理：源坐标的 {up_axis.upper()} 轴为部件朝上方向，"
-                        "产物已旋转为 glTF 规范 Y-up（几何形状不变，仅朝向规范化）"
+                        f"STEP treated as --up-axis {up_axis}: the source {up_axis.upper()} axis points up;"
+                        " output rotated to the glTF-required Y-up (geometry unchanged, orientation normalized only)"
                     )
                 warnings.append(warn("UP_AXIS_NORMALIZED", msg))
             output = result.pop("output", None)
@@ -142,16 +142,16 @@ def run_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
             errors.append(str(e))
             exit_code = EXIT_PARAM_CONFLICT
         except (ValueError, NotImplementedError) as e:
-            errors.append(f"几何算法失败: {e}")
+            errors.append(f"Geometry algorithm failed: {e}")
             exit_code = EXIT_ALGORITHM_FAILED
         except ImportError as e:
-            errors.append(f"Tier1 依赖缺失: {e}")
+            errors.append(f"Tier1 dependency missing: {e}")
             exit_code = EXIT_INTERNAL
         except MemoryError:
-            errors.append("内存超限（Tier1）")
+            errors.append("Out of memory (Tier1)")
             exit_code = EXIT_RESOURCE_LIMIT
         except Exception as e:  # noqa: BLE001 - 未知异常按内部错误披露完整栈
-            errors.append(f"内部错误: {e}\n{traceback.format_exc()}")
+            errors.append(f"Internal error: {e}\n{traceback.format_exc()}")
             exit_code = EXIT_INTERNAL
 
     if input_info is None:
@@ -205,12 +205,12 @@ def _single_output(out_path: str, fmt: str, vertices: int, faces: int, files: li
 
 def _cmd_inspect(input_path, params, output_path, output_dir, overwrite):
     # 输入侧统计已由 run_payload → build_input_info 完成；inspect 无产物
-    return {"tier_note": "Tier1 inspect：结构统计（trimesh/gmsh 路线）"}
+    return {"tier_note": "Tier1 inspect: structural statistics (trimesh/gmsh route)"}
 
 
 def _cmd_simplify(input_path, params, output_path, output_dir, overwrite):
     if not output_path:
-        raise KernelError(EXIT_PARAM_CONFLICT, "simplify 需要 payload.output")
+        raise KernelError(EXIT_PARAM_CONFLICT, "simplify requires payload.output")
     from .services import simplify as svc
 
     target_faces = params.get("target_faces")
@@ -233,7 +233,7 @@ def _cmd_simplify(input_path, params, output_path, output_dir, overwrite):
 
 def _cmd_segment(input_path, params, output_path, output_dir, overwrite):
     if not output_dir:
-        raise KernelError(EXIT_PARAM_CONFLICT, "segment 需要 payload.output_dir")
+        raise KernelError(EXIT_PARAM_CONFLICT, "segment requires payload.output_dir")
     from .services import segment as svc
 
     result = svc.segment_file(
@@ -273,7 +273,7 @@ def _cmd_segment(input_path, params, output_path, output_dir, overwrite):
 
 def _cmd_texture(input_path, params, output_path, output_dir, overwrite):
     if not output_path:
-        raise KernelError(EXIT_PARAM_CONFLICT, "texture 需要 payload.output")
+        raise KernelError(EXIT_PARAM_CONFLICT, "texture requires payload.output")
     from .services import texture as svc
 
     # --image 可选（与 Tier0 契约一致：无贴图时仅重生成 UV）
@@ -292,13 +292,13 @@ def _cmd_texture(input_path, params, output_path, output_dir, overwrite):
     return {
         "output": output,
         "warnings": result.get("warnings", []),
-        "tier_note": "Tier1 texture：合并网格重投影（无 --image 时仅重生成 UV，材质统一为默认 PBR）",
+        "tier_note": "Tier1 texture: reprojection on the merged mesh (without --image, UVs are regenerated only; materials unified to default PBR)",
     }
 
 
 def _cmd_convert(input_path, params, output_path, output_dir, overwrite):
     if not output_path:
-        raise KernelError(EXIT_PARAM_CONFLICT, "convert 需要 payload.output")
+        raise KernelError(EXIT_PARAM_CONFLICT, "convert requires payload.output")
     from .services import convert as svc
 
     to = str(params.get("to", "glb"))
@@ -311,7 +311,7 @@ def _cmd_convert(input_path, params, output_path, output_dir, overwrite):
 
 def _cmd_lod(input_path, params, output_path, output_dir, overwrite):
     if not output_dir:
-        raise KernelError(EXIT_PARAM_CONFLICT, "lod 需要 payload.output_dir")
+        raise KernelError(EXIT_PARAM_CONFLICT, "lod requires payload.output_dir")
     from .services import lod as svc
 
     result = svc.lod_file(
@@ -341,7 +341,7 @@ def _cmd_lod(input_path, params, output_path, output_dir, overwrite):
 
 def _cmd_optimize(input_path, params, output_path, output_dir, overwrite):
     if not output_path:
-        raise KernelError(EXIT_PARAM_CONFLICT, "optimize 需要 payload.output")
+        raise KernelError(EXIT_PARAM_CONFLICT, "optimize requires payload.output")
     from .services import optimize as svc
 
     ratio = params.get("ratio")
@@ -366,13 +366,13 @@ def _cmd_optimize(input_path, params, output_path, output_dir, overwrite):
 
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
-        sys.stderr.write("用法: python -m meshify_kernel <payload.json>\n")
+        sys.stderr.write("Usage: python -m meshify_kernel <payload.json>\n")
         return EXIT_PARAM_CONFLICT
     try:
         with open(argv[1], "r", encoding="utf-8") as f:
             payload = json.load(f)
     except (OSError, json.JSONDecodeError) as e:
-        sys.stderr.write(f"payload 不可读: {e}\n")
+        sys.stderr.write(f"Payload unreadable: {e}\n")
         return EXIT_INPUT_UNREADABLE
 
     report = run_payload(payload)

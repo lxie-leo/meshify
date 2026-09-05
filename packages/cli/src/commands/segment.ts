@@ -45,16 +45,16 @@ export function registerSegment(program: Command): void {
 	addCommonOptions(
 		program
 			.command('segment')
-			.description('模型分割：--mode connected（连通域拆件）/ plane（平面切割+封口）/ semantic（法线位置聚类）')
-			.argument('<input>', '输入模型（glb/gltf/obj/stl/ply）')
-			.option('--mode <mode>', '分割模式: connected | plane | semantic（必填）')
-			.option('--clusters <n>', 'semantic 聚类数（默认 8）', '8')
-			.option('--axis <axis>', 'plane 模式：切割轴 x | y | z（与 --origin/--normal 二选一）')
-			.option('--position <n>', 'plane 模式：切割位置 ∈ [-1,1]（线性映射包围盒两端，maestro 滑块语义）', '0')
-			.option('--origin <vec3>', 'plane 模式：原生坐标系平面点 "x,y,z"（与 --axis 二选一）')
-			.option('--normal <vec3>', 'plane 模式：原生坐标系平面法线 "x,y,z"（与 --axis 二选一）')
-			.option('--no-cap', 'plane 模式：禁用截面封口（默认开启 earcut 封口保水密，坑 5）')
-			.option('--min-faces <n>', 'connected 模式：小于该面数的碎片部件丢弃（默认 1 = 不丢）', '1'),
+			.description('Split a model: --mode connected (connected components) / plane (plane cut + capping) / semantic (normal+position clustering)')
+			.argument('<input>', 'input model (glb/gltf/obj/stl/ply)')
+			.option('--mode <mode>', 'segmentation mode: connected | plane | semantic (required)')
+			.option('--clusters <n>', 'semantic cluster count (default 8)', '8')
+			.option('--axis <axis>', 'plane mode: cut axis x | y | z (mutually exclusive with --origin/--normal)')
+			.option('--position <n>', 'plane mode: cut position ∈ [-1,1] (linearly mapped across the bbox; maestro slider semantics)', '0')
+			.option('--origin <vec3>', 'plane mode: plane point "x,y,z" in native coordinates (mutually exclusive with --axis)')
+			.option('--normal <vec3>', 'plane mode: plane normal "x,y,z" in native coordinates (mutually exclusive with --axis)')
+			.option('--no-cap', 'plane mode: disable cross-section capping (earcut capping for watertightness is on by default, pitfall 5)')
+			.option('--min-faces <n>', 'connected mode: drop fragment parts below this face count (default 1 = drop nothing)', '1'),
 		// op 段含 --mode 原始值：早失败时（mode 校验自身抛错）也能落对报告名（wrapper 内净化）
 	).action(withFailureManifest('segment', (o) => `segment-${String(o.mode ?? 'unknown')}`, async (input: string, cmdOpts: Record<string, unknown>) => {
 		const opts = cmdOpts as GlobalOptions & Record<string, unknown>;
@@ -64,7 +64,7 @@ export function registerSegment(program: Command): void {
 
 		const mode = String(opts.mode ?? '');
 		if (mode !== 'connected' && mode !== 'plane' && mode !== 'semantic') {
-			throw new MeshifyError(EXIT_PARAM_CONFLICT, `--mode 必须是 connected | plane | semantic，收到: ${opts.mode ?? '(缺失)'}`);
+			throw new MeshifyError(EXIT_PARAM_CONFLICT, `--mode must be connected | plane | semantic, got: ${opts.mode ?? '(missing)'}`);
 		}
 
 		const params: Record<string, unknown> = { mode };
@@ -75,18 +75,18 @@ export function registerSegment(program: Command): void {
 			const hasAxis = opts.axis !== undefined;
 			const hasOrigin = opts.origin !== undefined;
 			if (hasAxis && hasOrigin) {
-				throw new MeshifyError(EXIT_PARAM_CONFLICT, '--axis/--position 与 --origin/--normal 是两套互斥的平面定义，只能选一套');
+				throw new MeshifyError(EXIT_PARAM_CONFLICT, '--axis/--position and --origin/--normal are two mutually exclusive plane definitions; pick one');
 			}
 			if (!hasAxis && !hasOrigin) {
-				throw new MeshifyError(EXIT_PARAM_CONFLICT, 'plane 模式需要 --axis x|y|z + --position，或 --origin "x,y,z" + --normal "x,y,z"');
+				throw new MeshifyError(EXIT_PARAM_CONFLICT, 'plane mode needs --axis x|y|z + --position, or --origin "x,y,z" + --normal "x,y,z"');
 			}
 			if (hasOrigin !== (opts.normal !== undefined)) {
-				throw new MeshifyError(EXIT_PARAM_CONFLICT, '--origin 与 --normal 必须成对出现');
+				throw new MeshifyError(EXIT_PARAM_CONFLICT, '--origin and --normal must be provided together');
 			}
 			if (hasAxis) {
 				const axis = String(opts.axis).toLowerCase();
 				if (axis !== 'x' && axis !== 'y' && axis !== 'z') {
-					throw new MeshifyError(EXIT_PARAM_CONFLICT, `--axis 只接受 x | y | z，收到: ${opts.axis}`);
+					throw new MeshifyError(EXIT_PARAM_CONFLICT, `--axis only accepts x | y | z, got: ${opts.axis}`);
 				}
 				params.axis = axis;
 				params.position = parseNumberStrict(opts.position, 'position', { min: -1, max: 1 });
@@ -100,14 +100,14 @@ export function registerSegment(program: Command): void {
 		const route = await routeTier('segment', input, format, opts, { params, op, multi: true });
 		if (route.handled) return;
 
-		progress('读取输入…');
+		progress('Loading input…');
 		const loaded = await loadInput(input, format);
 		assertResourceLimits(loaded.bytes, loaded.inputInfo.faces, { force: !!opts.force });
 		assertProcessableGeometry(loaded.inputInfo, 'segment');
 		// 预览 before 快照需在内核改动 Document 之前捕获
 		const beforeBytes = opts.previewHtml ? await documentToGlbBytes(loaded.doc) : null;
 
-		progress('构建全局几何…');
+		progress('Building global geometry…');
 		const soup = buildSoup(collectPrimitives(loaded.doc));
 
 		let outDoc: Document;
@@ -116,24 +116,24 @@ export function registerSegment(program: Command): void {
 		let tierNote: string | undefined;
 
 		if (mode === 'connected') {
-			progress('连通域分割…');
+			progress('Segmenting connected components…');
 			const result = segmentConnected(soup, { minFaces: params.min_faces as number });
 			warnings = warnings.concat(result.warnings);
 			outDoc = buildPartDocument(loaded.doc, soup, result.parts, { doubleSided: true }); // 坑 3
 			partSummaries = collectPartStats(outDoc, result.parts.length);
-			tierNote = `connected: ${result.totalComponents} 连通域，输出 ${result.parts.length} 部件`;
-			progressDone(`连通域分割完成：${result.totalComponents} 域 → ${result.parts.length} 部件`);
+			tierNote = `connected: ${result.totalComponents} components, ${result.parts.length} parts output`;
+			progressDone(`Connected segmentation done: ${result.totalComponents} components → ${result.parts.length} parts`);
 		} else if (mode === 'semantic') {
-			progress('语义聚类分割…');
+			progress('Segmenting by semantic clustering…');
 			const result = segmentSemantic(soup, { clusters: params.clusters as number });
 			warnings = warnings.concat(result.warnings);
 			outDoc = buildPartDocument(loaded.doc, soup, result.parts, { doubleSided: true });
 			applyPartColors(outDoc, result.partColors);
 			partSummaries = collectPartStats(outDoc, result.parts.length);
-			tierNote = `semantic: ${result.totalComponents} 实体，聚类 k=${params.clusters}，输出 ${result.parts.length} 部件（认的是朝向+位置而非零件语义）`;
-			progressDone(`语义分割完成：${result.parts.length} 部件`);
+			tierNote = `semantic: ${result.totalComponents} solids, k=${params.clusters}, ${result.parts.length} parts output (clusters by orientation+position, not part semantics)`;
+			progressDone(`Semantic segmentation done: ${result.parts.length} parts`);
 		} else {
-			progress('平面切割…');
+			progress('Cutting by plane…');
 			const plane = resolvePlane(soup, params);
 			let cut: PlaneCutResult;
 			try {
@@ -141,14 +141,14 @@ export function registerSegment(program: Command): void {
 			} catch (err) {
 				throw new MeshifyError(
 					EXIT_ALGORITHM_FAILED,
-					`平面切割失败: ${err instanceof Error ? err.message : String(err)}`,
+					`Plane cut failed: ${err instanceof Error ? err.message : String(err)}`,
 				);
 			}
 			warnings = warnings.concat(cut.warnings);
 			outDoc = buildPlanePartsDocument(loaded.doc, soup, cut, { doubleSided: true });
 			partSummaries = collectPartStats(outDoc, cut.parts.length);
-			tierNote = `plane: ${cut.parts.length} 部件，封口=${cut.capped}（截面法线取平面 ±n，水密按几何位置焊接）`;
-			progressDone(`平面切割完成：${cut.parts.length} 部件（封口${cut.capped ? '已生成' : '未生成'}）`);
+			tierNote = `plane: ${cut.parts.length} parts, capped=${cut.capped} (section normals use ±n of the plane; watertightness welded by geometric position)`;
+			progressDone(`Plane cut done: ${cut.parts.length} parts (cap ${cut.capped ? 'generated' : 'not generated'})`);
 		}
 
 		const om = new OutputManager(input, { overwrite: !!opts.overwrite, explicit: opts.output });
@@ -161,11 +161,11 @@ export function registerSegment(program: Command): void {
 		const files = [fileEntryOf(outPath, 'asset')];
 
 		if (opts.previewHtml) {
-			progress('生成预览页…');
+			progress('Generating preview page…');
 			const htmlPath = om.claim(om.previewPath(outPath));
 			writePreviewHtml({
-				before: [{ label: '原始', bytes: beforeBytes! }],
-				after: [{ label: `${mode} 分割产物`, bytes: readBytes(outPath) }],
+				before: [{ label: 'Input', bytes: beforeBytes! }],
+				after: [{ label: `${mode} segmentation output`, bytes: readBytes(outPath) }],
 				report: draftOf({
 					command: 'segment',
 					input: loaded.inputInfo,
@@ -179,7 +179,7 @@ export function registerSegment(program: Command): void {
 				outPath: htmlPath,
 			});
 			files.push(fileEntryOf(htmlPath, 'preview'));
-			progressDone(`预览页 ${htmlPath}`);
+			progressDone(`Preview page: ${htmlPath}`);
 		}
 
 		emitReport(
@@ -209,7 +209,7 @@ function resolvePlane(soup: Soup, params: Record<string, unknown>): { origin: [n
 	const axis = params.axis as 'x' | 'y' | 'z';
 	const position = params.position as number;
 	const bbox = soupBounds(soup);
-	if (!bbox) throw new MeshifyError(EXIT_ALGORITHM_FAILED, '模型无几何，无法确定切割平面');
+	if (!bbox) throw new MeshifyError(EXIT_ALGORITHM_FAILED, 'Model has no geometry; cannot determine the cut plane');
 	const ai = axis === 'x' ? 0 : axis === 'y' ? 1 : 2;
 	const lo = bbox.min[ai];
 	const hi = bbox.max[ai];
@@ -276,8 +276,8 @@ function collectPartStats(doc: Document, partCount: number): { index: number; pa
 
 function parseNumberStrict(raw: unknown, name: string, opts: { min?: number; max?: number }): number {
 	const n = Number(raw);
-	if (!Number.isFinite(n)) throw new MeshifyError(EXIT_PARAM_CONFLICT, `--${name} 需要数字，收到: ${raw}`);
-	if (opts.min !== undefined && n < opts.min) throw new MeshifyError(EXIT_PARAM_CONFLICT, `--${name} 必须 ≥ ${opts.min}，收到: ${n}`);
-	if (opts.max !== undefined && n > opts.max) throw new MeshifyError(EXIT_PARAM_CONFLICT, `--${name} 必须 ≤ ${opts.max}，收到: ${n}`);
+	if (!Number.isFinite(n)) throw new MeshifyError(EXIT_PARAM_CONFLICT, `--${name} needs a number, got: ${raw}`);
+	if (opts.min !== undefined && n < opts.min) throw new MeshifyError(EXIT_PARAM_CONFLICT, `--${name} must be ≥ ${opts.min}, got: ${n}`);
+	if (opts.max !== undefined && n > opts.max) throw new MeshifyError(EXIT_PARAM_CONFLICT, `--${name} must be ≤ ${opts.max}, got: ${n}`);
 	return n;
 }

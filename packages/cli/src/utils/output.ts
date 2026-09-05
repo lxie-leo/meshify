@@ -78,7 +78,7 @@ export class OutputManager {
 		if (samePath(abs, this.inputPath)) {
 			throw new MeshifyError(
 				EXIT_PARAM_CONFLICT,
-				`输出路径与输入相同: ${abs}。拒绝覆盖输入文件（--overwrite 也不能覆盖输入）。`,
+				`Output path equals input: ${abs}. Overwriting the input file is refused (--overwrite cannot override this).`,
 			);
 		}
 		const claimKey = CASE_INSENSITIVE_FS ? abs.toLowerCase() : abs;
@@ -86,7 +86,7 @@ export class OutputManager {
 		if (fs.existsSync(abs) && !this.overwrite) {
 			throw new MeshifyError(
 				EXIT_PARAM_CONFLICT,
-				`输出已存在: ${abs}。默认不覆盖既有产物；确认覆盖请加 --overwrite。`,
+				`Output already exists: ${abs}. Existing artifacts are not overwritten by default; pass --overwrite to replace.`,
 			);
 		}
 		this.claimed.add(claimKey);

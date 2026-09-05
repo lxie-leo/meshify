@@ -26,10 +26,10 @@ describe('审计回归：损坏输入归一 exit 2', () => {
 		fs.writeFileSync(f, fs.readFileSync(FIX('glb/dense.glb')).subarray(0, 8000));
 		const r = cli(['simplify', f, '--ratio', '0.5', '-o', path.join(dir, 'o.glb'), '--json']);
 		expect(r.code).toBe(2);
-		expect(r.stderr).toMatch(/解析失败|不可读/);
+		expect(r.stderr).toMatch(/parse failed|unreadable/);
 		// 早失败最小 manifest：errors 携带原因，产物绝不出现在盘上
 		expect(r.manifest?.exit_code).toBe(2);
-		expect((r.manifest?.errors ?? []).join(' ')).toMatch(/解析失败|不可读/);
+		expect((r.manifest?.errors ?? []).join(' ')).toMatch(/parse failed|unreadable/);
 		expect(fs.existsSync(path.join(dir, 'o.glb'))).toBe(false);
 	});
 
@@ -41,7 +41,7 @@ describe('审计回归：损坏输入归一 exit 2', () => {
 			fs.writeFileSync(f, fs.readFileSync(FIX('glb/dense.glb')).subarray(0, 8000));
 			const r = cli(['simplify', f, '--ratio', '0.5', '--tier', 'py', '-o', path.join(dir, 'o.glb'), '--json']);
 			expect(r.code).toBe(2);
-			expect((r.manifest?.errors ?? []).join(' ')).toMatch(/解析失败|不可读/);
+			expect((r.manifest?.errors ?? []).join(' ')).toMatch(/parse failed|unreadable/);
 		},
 		180_000,
 	);
@@ -59,7 +59,7 @@ describe('审计回归：大小写不敏感文件系统同文件保护', () => {
 			fs.copyFileSync(FIX('glb/small.glb'), input);
 			const r = cli(['simplify', input, '-o', path.join(dir, 'model.glb'), '--overwrite', '--json']);
 			expect(r.code).toBe(4);
-			expect(r.stderr).toMatch(/输入|覆盖/);
+			expect(r.stderr).toMatch(/equals input|overwrit/i);
 		},
 	);
 });
@@ -72,7 +72,7 @@ describe('审计回归：convert 输出契约', () => {
 		const dir = freshDir('audit-convert-ext');
 		const r = cli(['convert', FIX('glb/dense.glb'), '--to', 'stl', '-o', path.join(dir, 'bad.glb'), '--json']);
 		expect(r.code).toBe(4);
-		expect(r.stderr).toMatch(/扩展名|一致/);
+		expect(r.stderr).toMatch(/extension .* does not match/);
 		// 拒绝先于写入：产物绝不出盘（失败 report 是工具自有日志，允许落盘）
 		expect(fs.readdirSync(dir).filter((f) => !f.endsWith('.report.json'))).toEqual([]);
 		expect(fs.existsSync(path.join(dir, 'bad.glb'))).toBe(false);
@@ -116,7 +116,7 @@ describe('审计回归：texture 参数契约', () => {
 			'-o', path.join(dir, 'o.glb'), '--json',
 		]);
 		expect(r.code).toBe(2);
-		expect(r.stderr).toMatch(/--image|解码|图片/);
+		expect(r.stderr).toMatch(/--image|decodable/);
 	});
 
 	it.runIf(TIER1())(
@@ -151,7 +151,7 @@ describe('审计回归：空场景（0 面）统一 exit 6', () => {
 			fs.copyFileSync(FIX('glb/empty.glb'), input);
 			const r = cli([...cmd, input, '-o', path.join(dir, 'out'), '--json']);
 			expect(r.code).toBe(6);
-			expect(r.stderr).toMatch(/三角面|几何/);
+			expect(r.stderr).toMatch(/no triangles|geometry/);
 		});
 	}
 

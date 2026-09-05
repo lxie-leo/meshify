@@ -12,7 +12,7 @@ import {
 	stlToDocument,
 	assertResourceLimits,
 } from '@meshify/kernel-ts';
-import { FIX, freshDir, fixtureExists } from './helpers';
+import { FIX } from './helpers';
 
 describe('inspect', () => {
 	it('multimat.glb：3 子网格/3 材质/1 贴图/无 UV 子网格提示', async () => {
@@ -76,7 +76,7 @@ describe('OBJ 读取', () => {
 		expect(r.materialCount).toBe(2);
 		expect(r.doc.getRoot().listMeshes()).toHaveLength(2);
 		const insp = r.doc.getRoot().listMeshes().map((m) => m.listPrimitives()[0]);
-		const faces = insp.reduce((s, p) => s + (p.getIndices()?.getCount() ?? p.getAttribute('POSITION').getCount()) / 3, 0);
+		const faces = insp.reduce((s, p) => s + (p.getIndices()?.getCount() ?? p.getAttribute('POSITION')?.getCount() ?? 0) / 3, 0);
 		expect(faces).toBe(24); // 两盒 × 12
 	});
 
@@ -91,13 +91,13 @@ describe('STL 读取', () => {
 		const doc = stlToDocument(fs.readFileSync(FIX('stl/cube.stl')), 'cube');
 		const prim = doc.getRoot().listMeshes()[0].listPrimitives()[0];
 		expect(prim.getIndices()?.getCount()).toBe(36);
-		expect(prim.getAttribute('POSITION').getCount()).toBe(8); // 顶点焊接后 8 角点
+		expect(prim.getAttribute('POSITION')?.getCount()).toBe(8); // 顶点焊接后 8 角点
 	});
 });
 
 describe('资源防护（guard）', () => {
 	it('面数超限抛出（exit 7 语义）', () => {
-		expect(() => assertResourceLimits(1000, 6_000_000)).toThrowError(/面/);
+		expect(() => assertResourceLimits(1000, 6_000_000)).toThrowError(/faces/);
 	});
 	it('字节超限抛出', () => {
 		expect(() => assertResourceLimits(600 * 1024 * 1024, 100)).toThrowError(/MB/);

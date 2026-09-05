@@ -59,7 +59,7 @@ export function cutSoupByPlane(soup: Soup, plane: PlaneSpec, opts: { cap: boolea
 
 	let [nx, ny, nz] = plane.normal;
 	const nlen = Math.hypot(nx, ny, nz);
-	if (!(nlen > 0)) throw new Error('切割平面法线为零向量');
+	if (!(nlen > 0)) throw new Error('Cut plane normal is a zero vector');
 	nx /= nlen;
 	ny /= nlen;
 	nz /= nlen;
@@ -192,7 +192,7 @@ export function cutSoupByPlane(soup: Soup, plane: PlaneSpec, opts: { cap: boolea
 	clipSide(false, groupsB);
 
 	if (groupsA.size === 0 && groupsB.size === 0) {
-		throw new Error('切割平面未与模型相交（未产生任何三角形）');
+		throw new Error('Cut plane does not intersect the model (no triangles produced)');
 	}
 
 	// ---- 封口（坑 5）----
@@ -203,7 +203,7 @@ export function cutSoupByPlane(soup: Soup, plane: PlaneSpec, opts: { cap: boolea
 		capped = capA + capB > 0;
 		if (capped && soup.uvs) {
 			warnings.push(
-				warn('UV_REMAP_APPROXIMATED', '截面封口顶点 UV 按切口边插值（近似），贴图在截面处可能轻微拉伸'),
+				warn('UV_REMAP_APPROXIMATED', 'Cross-section cap vertex UVs interpolated along the cut edge (approximate); textures may stretch slightly at the section'),
 			);
 		}
 		// 显式披露：截面存在（产生了交点）却未能封口——典型如重合壳/非流形截面
@@ -211,7 +211,7 @@ export function cutSoupByPlane(soup: Soup, plane: PlaneSpec, opts: { cap: boolea
 			warnings.push(
 				warn(
 					'NON_MANIFOLD_INPUT',
-					'切割产生了截面交点但未能提取闭合边界环（疑似重合壳/非流形输入），截面未封口',
+					'The cut produced cross-section intersections but no closed boundary ring could be extracted (likely coincident shells / non-manifold input); the section is uncapped',
 				),
 			);
 		}
@@ -340,7 +340,7 @@ function capSide(soup: Soup, groups: Map<number, number[]>, ctx: CapContext): nu
 	}
 	if (openChains > 0) {
 		warnings.push(
-			warn('NON_MANIFOLD_INPUT', `截面边界存在 ${openChains} 条未闭合链（输入网格开口/非流形），对应区域不封口`),
+			warn('NON_MANIFOLD_INPUT', `Cross-section boundary has ${openChains} open chain(s) (input mesh open / non-manifold); those regions are left uncapped`),
 		);
 	}
 	if (rings.length === 0) return 0;
@@ -495,7 +495,7 @@ function capSide(soup: Soup, groups: Map<number, number[]>, ctx: CapContext): nu
 	}
 	if (fragments > 0) {
 		warnings.push(
-			warn('FRAGMENT_FACES_KEPT', `截面三角化产生 ${fragments} 个零面积碎片三角形，已原样保留（渲染不可见，删除会在壳上开洞）`),
+			warn('FRAGMENT_FACES_KEPT', `Cross-section triangulation produced ${fragments} zero-area fragment triangles; kept as-is (invisible when rendered; removing them would open holes in the shell)`),
 		);
 	}
 	if (outTris.length === 0) return 0;

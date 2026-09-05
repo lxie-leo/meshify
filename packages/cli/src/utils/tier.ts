@@ -99,11 +99,11 @@ export async function routeTier(
 			om.ensureDirFor(outPath);
 			payload.output = outPath;
 		}
-		progress('Tier1 (Python/uv) 执行中…');
+		progress('Running Tier1 (Python/uv)…');
 		const result = await runPythonKernel(payload);
 		// --preview-html 在 Tier1 路径同样生效（成功产物上生成对比页；失败时不伪造）
 		if (opts.previewHtml && result.report.exit_code === 0) {
-			progress('生成预览页…');
+			progress('Generating preview page…');
 			await attachTier1Preview(result.report, {
 				input: path.resolve(input),
 				format,
@@ -126,7 +126,7 @@ export async function routeTier(
 async function decideWithCache(args: Omit<Parameters<typeof decideTier>[0], 'env'>): Promise<TierDecision> {
 	let env = readTierEnvCache();
 	if (!env) {
-		progress('探测 Tier1 环境（uv / kernel-py）…');
+		progress('Probing the Tier1 environment (uv / kernel-py)…');
 		env = probeTierEnv();
 		writeTierEnvCache(env);
 	}

@@ -32,7 +32,7 @@ export function segmentSemantic(
 ): SemanticSegmentResult {
 	const warnings: ReportWarning[] = [];
 	const nFaces = soup.totalTriangles;
-	if (nFaces === 0) throw new Error('网格没有任何三角形');
+	if (nFaces === 0) throw new Error('Mesh contains no triangles');
 	const clusters = Math.max(2, Math.floor(opts.clusters ?? 8));
 
 	// ---- 1. 跨子网格焊接 + 面邻接表 ----

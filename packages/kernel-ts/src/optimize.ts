@@ -82,7 +82,7 @@ export async function optimizeDocument(
 		);
 		if (oversized > 0) {
 			warnings.push(
-				warn('TEXTURE_DOWNSCALED', `${oversized} 张贴图超过最大边长 ${opts.textureSize}，已降采样（清晰度换体积）`),
+				warn('TEXTURE_DOWNSCALED', `${oversized} texture(s) exceeded the max edge length ${opts.textureSize} and were downsampled (sharpness traded for size)`),
 			);
 		}
 	}
@@ -103,7 +103,7 @@ export async function optimizeDocument(
 			warnings.push(
 				warn(
 					'DRACO_UNAVAILABLE',
-					'请求 draco 编码但可选依赖 draco3dgltf 不可用，几何压缩已跳过（其余优化照常）',
+					'draco encoding requested but the optional dependency draco3dgltf is unavailable; geometry compression skipped (other steps proceed)',
 				),
 			);
 		}

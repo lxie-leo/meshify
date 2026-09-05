@@ -57,7 +57,7 @@ def detect_up_axis(step_path: str) -> Dict[str, object]:
     try:
         import gmsh
     except ImportError as e:  # pragma: no cover - 环境缺失
-        raise ImportError("解析 STEP 需要 gmsh（cd packages-py/kernel-py && uv sync）") from e
+        raise ImportError("STEP parsing requires gmsh (cd packages-py/kernel-py && uv sync)") from e
 
     gmsh.initialize(interruptible=False)
     try:
@@ -67,13 +67,13 @@ def detect_up_axis(step_path: str) -> Dict[str, object]:
             gmsh.merge(step_path)
             gmsh.model.occ.synchronize()
         except Exception as e:
-            raise input_unreadable(f"STEP 解析失败（{step_path}）: {e}") from e
+            raise input_unreadable(f"STEP parse failed ({step_path}): {e}") from e
 
         x0, y0, z0, x1, y1, z1 = gmsh.model.getBoundingBox(-1, -1)
         lo = np.array([x0, y0, z0], dtype=np.float64)
         ext = np.array([x1 - x0, y1 - y0, z1 - z0], dtype=np.float64)
         if float(ext.min()) <= 0.0:
-            return {"resolved": None, "evidence": "包围盒退化（零厚度），无法判定", "candidates": []}
+            return {"resolved": None, "evidence": "bounding box is degenerate (zero thickness); cannot resolve", "candidates": []}
 
         planes, cylinders = _collect_axis_faces(gmsh)
         total_area = sum(p["area"] for p in planes) or 1.0
@@ -83,7 +83,7 @@ def detect_up_axis(step_path: str) -> Dict[str, object]:
         if solid is None:
             return {
                 "resolved": None,
-                "evidence": "粗网格化失败，无法验证孔特征真伪",
+                "evidence": "coarse meshing failed; cannot verify hole features",
                 "candidates": _plane_candidates(planes, total_area),
             }
 
@@ -97,9 +97,9 @@ def detect_up_axis(step_path: str) -> Dict[str, object]:
             return {
                 "resolved": None,
                 "evidence": (
-                    "孔证据不足或各轴向势均力敌（孔票数 "
+                    "insufficient hole evidence or tied axes (hole votes: "
                     + ", ".join(f"{AXIS_NAMES[i]}={votes[i]}" for i in range(3))
-                    + "）——对称件/无安装孔/多向孔模式的部件无法可靠判定"
+                    + ") - symmetric parts / no mounting holes / multi-directional hole patterns cannot be resolved reliably"
                 ),
                 "candidates": _plane_candidates(planes, total_area),
             }
@@ -109,7 +109,7 @@ def detect_up_axis(step_path: str) -> Dict[str, object]:
         if len(signs) > 1:
             return {
                 "resolved": None,
-                "evidence": f"包围盒 ±{AXIS_NAMES[best_axis]} 两端都检出孔簇，无法区分哪端是底面",
+                "evidence": f"hole clusters found at both ±{AXIS_NAMES[best_axis]} ends of the bounding box; cannot tell which end is the base",
                 "candidates": _plane_candidates(planes, total_area),
             }
         if signs:
@@ -122,10 +122,11 @@ def detect_up_axis(step_path: str) -> Dict[str, object]:
 
         resolved = AXIS_NAMES[best_axis] if sign > 0 else "-" + AXIS_NAMES[best_axis]
         side = "min" if sign > 0 else "max"
-        ev_clusters = "、".join(f"{cl['count']}×r≈{cl['radius']:.1f}" for cl in clusters[best_axis])
+        ev_clusters = ", ".join(f"{cl['count']}x r~{cl['radius']:.1f}" for cl in clusters[best_axis])
         evidence = (
-            f"⊥{AXIS_NAMES[best_axis]} 轴平面检出安装孔簇（{ev_clusters} mm，圆心均在实体外=真孔），"
-            f"孔簇位于包围盒 {side} 侧 → 该面为底面朝下"
+            f"mounting-hole cluster on the plane perpendicular to the {AXIS_NAMES[best_axis]} axis "
+            f"({ev_clusters} mm; centers all outside the solid = true holes); "
+            f"the cluster sits on the {side} side of the bounding box, so that face is the base pointing down"
         )
         return {"resolved": resolved, "evidence": evidence, "candidates": []}
     finally:
@@ -285,7 +286,7 @@ def _plane_candidates(planes: List[dict], total_area: float) -> List[dict]:
     out = []
     for (k, sign), (area, cnt) in ranked:
         name = ("+" if sign > 0 else "-") + AXIS_NAMES[k]
-        out.append({"axis": name, "note": f"法向 {name} 的平面 {cnt} 张、面积占比 {area / total_area:.0%}（包围盒 {'max' if sign > 0 else 'min'} 侧）"})
+        out.append({"axis": name, "note": f"{cnt} plane(s) with normal {name}, {area / total_area:.0%} of total area ({'max' if sign > 0 else 'min'} side of the bbox)"})
     return out
 
 
@@ -297,7 +298,7 @@ def mesh_step_groups(step_path: str, resolution: int = 100) -> Tuple[List[Tuple[
     try:
         import gmsh
     except ImportError as e:  # pragma: no cover - 环境缺失
-        raise ImportError("解析 STEP 需要 gmsh（cd packages-py/kernel-py && uv sync）") from e
+        raise ImportError("STEP parsing requires gmsh (cd packages-py/kernel-py && uv sync)") from e
 
     gmsh.initialize(interruptible=False)
     try:
@@ -308,7 +309,7 @@ def mesh_step_groups(step_path: str, resolution: int = 100) -> Tuple[List[Tuple[
             gmsh.model.occ.synchronize()
         except Exception as e:
             # 读不进来 = 输入不可读（截断/伪 STEP），不是算法失败
-            raise input_unreadable(f"STEP 解析失败（{step_path}）: {e}") from e
+            raise input_unreadable(f"STEP parse failed ({step_path}): {e}") from e
 
         xmin, ymin, zmin, xmax, ymax, zmax = gmsh.model.getBoundingBox(-1, -1)
         bbox = [[float(xmin), float(ymin), float(zmin)], [float(xmax), float(ymax), float(zmax)]]
@@ -365,7 +366,7 @@ def _orient_up(vertices: np.ndarray, up_axis: str) -> np.ndarray:
     try:
         indices, signs = UP_AXIS_ROTATIONS[up_axis]
     except KeyError:
-        raise param_conflict(f"--up-axis 取值应为 x|y|z（可加 - 前缀表示反向），收到: {up_axis}") from None
+        raise param_conflict(f"--up-axis must be x|y|z (optionally - prefixed to flip), got: {up_axis}") from None
     return vertices[:, list(indices)] * np.asarray(signs)
 
 
@@ -373,7 +374,7 @@ def step_to_glb(step_path: str, out_path: str, resolution: int = 100, up_axis: s
     """STEP → GLB；返回 {vertices, faces}（manifest 输出统计用）。"""
     groups, _bbox = mesh_step_groups(step_path, resolution)
     if not groups:
-        raise ValueError("STEP 文件未生成任何三角面，可能不包含实体几何或文件已损坏")
+        raise ValueError("STEP file produced no triangles; the file may contain no solid geometry or be corrupt")
     scene = groups_to_scene(groups, up_axis)
     mu.save_mesh(scene, out_path, file_type="glb")
     total_v, total_f = scene_totals(scene)
@@ -384,7 +385,7 @@ def inspect_step(step_path: str, resolution: int = 100) -> Dict[str, object]:
     """STEP 输入侧统计（inspect 语义：不落盘产物）。"""
     groups, bbox = mesh_step_groups(step_path, resolution)
     if not groups:
-        raise ValueError("STEP 文件未生成任何三角面，可能不包含实体几何或文件已损坏")
+        raise ValueError("STEP file produced no triangles; the file may contain no solid geometry or be corrupt")
 
     meshes = []
     total_v = 0
@@ -472,7 +473,7 @@ def _build_trimesh(vertices: np.ndarray, faces: np.ndarray, rgba: Optional[tuple
 
     mesh = trimesh.Trimesh(vertices=vertices, faces=faces, process=True)
     if len(mesh.vertices) == 0:
-        raise ValueError("STEP 转换后网格为空")
+        raise ValueError("Mesh empty after STEP conversion")
 
     mesh.update_faces(mesh.area_faces > 1e-12)
     mesh.remove_unreferenced_vertices()
@@ -505,7 +506,7 @@ def write_step_fixture(out_path: str, size: float = 2.0) -> str:
     try:
         import gmsh
     except ImportError as e:  # pragma: no cover
-        raise ImportError("生成 STEP fixture 需要 gmsh") from e
+        raise ImportError("Generating the STEP fixture requires gmsh") from e
 
     gmsh.initialize(interruptible=False)
     try:
@@ -530,7 +531,7 @@ def write_holed_base_fixture(out_path: str) -> str:
     try:
         import gmsh
     except ImportError as e:  # pragma: no cover
-        raise ImportError("生成 STEP fixture 需要 gmsh") from e
+        raise ImportError("Generating the STEP fixture requires gmsh") from e
 
     gmsh.initialize(interruptible=False)
     try:

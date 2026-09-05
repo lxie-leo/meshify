@@ -34,10 +34,10 @@ def texture_file(
     warnings: List[Dict[str, Any]] = []
     mesh = mu.load_mesh_merged(input_path)
     if len(mesh.vertices) == 0:
-        raise ValueError("模型不包含顶点")
+        raise ValueError("Model contains no vertices")
 
     if map_mode not in {"uv", "planar", "cylindrical", "spherical", "box"}:
-        raise ValueError(f"不支持的映射方式: {map_mode}")
+        raise ValueError(f"Unsupported map mode: {map_mode}")
 
     texture = None
     if image_path:
@@ -51,17 +51,17 @@ def texture_file(
     )
     if texture is not None:
         material.baseColorTexture = texture
-        warnings.append(warn("DOUBLE_SIDED_FORCED", "贴图产物材质 doubleSided（开口壳防背面剔除）"))
+        warnings.append(warn("DOUBLE_SIDED_FORCED", "Textured output material is doubleSided (open shells vs. backface culling)"))
 
     if map_mode == "uv":
         uvs = getattr(mesh.visual, "uv", None)
         if uvs is not None and len(uvs) > 0 and _is_atlas_artifact(mesh.visual):
             warnings.append(
-                warn("ATLAS_UV_IGNORED", "模型 UV 为合并产生的色块图集，已忽略并自动生成盒式 UV")
+                warn("ATLAS_UV_IGNORED", "Model UVs are a color-block atlas produced by merging; ignored, box UVs generated instead")
             )
             uvs = None
         if uvs is None or len(uvs) == 0:
-            warnings.append(warn("AUTO_BOX_UV_GENERATED", "模型无 UV 坐标，自动生成盒式 UV"))
+            warnings.append(warn("AUTO_BOX_UV_GENERATED", "Model has no UV coordinates; box UVs generated automatically"))
             uvs = _box_uv(mesh)
     elif map_mode == "planar":
         uvs = _planar_uv(mesh)

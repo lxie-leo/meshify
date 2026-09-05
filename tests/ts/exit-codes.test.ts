@@ -15,11 +15,11 @@ describe('退出码 2：输入不可读', () => {
 	it('文件不存在（stderr 诊断 + 退出码 + 最小失败 manifest）', () => {
 		const r = cli(['inspect', 'no/such/file.glb', '--json']);
 		expect(r.code).toBe(2);
-		expect(r.stderr).toMatch(/不存在或不可读|ENOENT/);
+		expect(r.stderr).toMatch(/missing or unreadable|ENOENT/);
 		// 早失败也产出最小 manifest：Agent 不必拿退出码猜原因（failed_early 披露）
 		expect(r.manifest).not.toBeNull();
 		expect(r.manifest?.exit_code).toBe(2);
-		expect((r.manifest?.errors ?? []).join(' ')).toMatch(/不存在或不可读|ENOENT/);
+		expect((r.manifest?.errors ?? []).join(' ')).toMatch(/missing or unreadable|ENOENT/);
 		expect(r.manifest?.output).toBeNull();
 		expect((r.manifest?.params as Record<string, unknown> | undefined)?.failed_early).toBe(true);
 	});
@@ -37,7 +37,7 @@ describe('退出码 3：格式不支持', () => {
 		fs.writeFileSync(f, 'Kaydara FBX Binary  \0\x1a\0');
 		const r = cli(['inspect', f, '--json']);
 		expect(r.code).toBe(3);
-		expect(r.stderr).toMatch(/格式|format/i);
+		expect(r.stderr).toMatch(/format/i);
 	});
 });
 
@@ -74,7 +74,7 @@ describe('退出码 4：参数冲突 / 拒绝覆盖', () => {
 		fs.copyFileSync(FIX('glb/small.glb'), copy);
 		const r = cli(['simplify', copy, '--ratio', '0.5', '--target-faces', '10']);
 		expect(r.code).toBe(4);
-		expect(r.stderr).toMatch(/互斥/);
+		expect(r.stderr).toMatch(/mutually exclusive/);
 		// 参数校验先于任何写入：不产生模型产物（失败 report 是工具自有日志，允许）
 		expect(fs.readdirSync(out).filter((f) => f !== 'small.glb' && f !== 'small.meshify')).toEqual([]);
 		expect(fs.existsSync(path.join(out, 'small.simplified.glb'))).toBe(false);
@@ -109,7 +109,7 @@ describe('退出码 6：算法失败', () => {
 	it('空几何输入 + plane 模式 → 统一守卫拦截（不依赖内核侧消息）', () => {
 		const r = cli(['segment', FIX('glb/empty.glb'), '--mode', 'plane', '--axis', 'x', '--json']);
 		expect(r.code).toBe(6);
-		expect(r.stderr).toMatch(/三角面|几何/);
+		expect(r.stderr).toMatch(/no triangles|geometry/);
 	});
 });
 

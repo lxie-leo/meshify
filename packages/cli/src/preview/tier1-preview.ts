@@ -28,13 +28,13 @@ export async function attachTier1Preview(report: MeshifyReport, args: Tier1Previ
 	);
 	if (assets.length === 0) {
 		report.warnings.push(
-			warn('PREVIEW_BEFORE_UNAVAILABLE', '产物不含 GLB（如目标格式 stl/obj/ply），浏览器无可渲染对象，预览页未生成'),
+			warn('PREVIEW_BEFORE_UNAVAILABLE', 'Artifact contains no GLB (e.g. target format stl/obj/ply); nothing renderable in a browser, preview page not generated'),
 		);
 		return;
 	}
 
 	const after: PreviewModel[] = assets.map((f) => ({
-		label: assets.length > 1 ? path.basename(f.path) : '转换产物',
+		label: assets.length > 1 ? path.basename(f.path) : 'Converted output',
 		bytes: new Uint8Array(fs.readFileSync(f.path)),
 	}));
 
@@ -43,7 +43,7 @@ export async function attachTier1Preview(report: MeshifyReport, args: Tier1Previ
 	if (args.format === 'glb' || args.format === 'gltf') {
 		try {
 			before.push({
-				label: `原始（${args.format}）`,
+				label: `Input (${args.format})`,
 				bytes: await documentToGlbBytes(await readDocument(args.input)),
 			});
 		} catch {
@@ -54,7 +54,7 @@ export async function attachTier1Preview(report: MeshifyReport, args: Tier1Previ
 		report.warnings.push(
 			warn(
 				'PREVIEW_BEFORE_UNAVAILABLE',
-				`原始输入为 ${args.format.toUpperCase()}，浏览器无法渲染，预览页仅展示产物侧（单视窗）`,
+				`The input is ${args.format.toUpperCase()}, which browsers cannot render; the preview page shows the artifact side only (single viewport)`,
 			),
 		);
 	}

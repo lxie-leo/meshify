@@ -15,9 +15,9 @@ import { tier0SelfCheck } from '@meshify/kernel-ts';
 export function registerDoctor(program: Command): void {
 	program
 		.command('doctor')
-		.description('环境自检：Node / Tier0 (WASM) / Tier1 (uv + kernel-py) / 磁盘；结果缓存 24h 供 tier 仲裁复用')
-		.option('--json', 'stdout 输出 JSON')
-		.option('--install-uv', '引导安装 uv（单文件安装器；Windows 用 PowerShell 脚本，其余 curl|sh）')
+		.description('Environment check: Node / Tier0 (WASM) / Tier1 (uv + kernel-py) / disk; results cached 24h for tier routing')
+		.option('--json', 'write JSON to stdout')
+		.option('--install-uv', 'install uv (single-file installer; PowerShell script on Windows, curl|sh elsewhere)')
 		.action(async (cmdOpts: Record<string, unknown>) => {
 			const json = !!cmdOpts.json;
 
@@ -110,57 +110,57 @@ function installUv(): boolean {
 	const cmd: [string, string[]] = win
 		? ['powershell', ['-ExecutionPolicy', 'ByPass', '-c', 'irm https://astral.sh/uv/install.ps1 | iex']]
 		: ['sh', ['-c', 'curl -LsSf https://astral.sh/uv/install.sh | sh']];
-	process.stdout.write(`安装 uv（${cmd[0]} …）：\n`);
+	process.stdout.write(`Installing uv (${cmd[0]} …):\n`);
 	const r = spawnSync(cmd[0], cmd[1], { stdio: 'inherit', windowsHide: false });
 	if (r.status !== 0) {
 		process.stderr.write(
-			'uv 安装失败。手动安装：\n  Windows:  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"\n' +
+			'uv installation failed. Manual install:\n  Windows:  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"\n' +
 				'  macOS/Linux:  curl -LsSf https://astral.sh/uv/install.sh | sh\n' +
-				'国内网络建议先设置镜像: UV_DEFAULT_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple\n',
+				'On slow links (mainland China), set a mirror first: UV_DEFAULT_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple\n',
 		);
 		return false;
 	}
-	process.stdout.write('uv 安装完成。重开终端（刷新 PATH）后再运行 meshify doctor 验证。\n');
+	process.stdout.write('uv installed. Reopen the terminal (to refresh PATH), then run meshify doctor to verify.\n');
 	return true;
 }
 
 function printDoctor(result: Awaited<ReturnType<typeof runDoctor>>): void {
 	const mark = (ok: boolean) => (ok ? '[ok]' : '[FAIL]');
 	const lines: string[] = [];
-	lines.push(`meshify doctor（${result.tool.version}）`);
-	lines.push(`${mark(result.node.ok)} Node ${result.node.version}（要求 ${result.node.required}）`);
-	lines.push(`${mark(result.tier0.meshoptWasm)} Tier0 meshoptimizer WASM（QEM 简化/压缩）`);
-	lines.push(`${mark(result.tier0.sharp)} Tier0 sharp（贴图压缩/降采样）`);
-	lines.push(`${mark(result.tier0.earcut)} Tier0 earcut（截面封口三角化）`);
-	lines.push(`${result.tier0.draco ? '[ok]' : '[--]'} Tier0 draco3dgltf（可选：draco 压缩；未装则 optimize --compression draco 自动跳过）`);
+	lines.push(`meshify doctor (${result.tool.version})`);
+	lines.push(`${mark(result.node.ok)} Node ${result.node.version} (requires ${result.node.required})`);
+	lines.push(`${mark(result.tier0.meshoptWasm)} Tier0 meshoptimizer WASM (QEM simplify/compress)`);
+	lines.push(`${mark(result.tier0.sharp)} Tier0 sharp (texture compression/downscaling)`);
+	lines.push(`${mark(result.tier0.earcut)} Tier0 earcut (cross-section cap triangulation)`);
+	lines.push(`${result.tier0.draco ? '[ok]' : '[--]'} Tier0 draco3dgltf (optional: draco compression; when absent, optimize --compression draco skips it)`);
 	lines.push(`${result.tier1.uv ? '[ok]' : '[--]'} Tier1 uv ${result.tier1.uvVersion ?? ''}`.trimEnd());
-	lines.push(`${result.tier1.python ? '[ok]' : '[--]'} Tier1 Python 可用性`);
+	lines.push(`${result.tier1.python ? '[ok]' : '[--]'} Tier1 Python availability`);
 	lines.push(
-		`${result.tier1.kernelDir ? '[ok]' : '[--]'} Tier1 kernel-py 目录 ${result.tier1.kernelDir ?? '（未找到 packages-py/kernel-py）'}`,
+		`${result.tier1.kernelDir ? '[ok]' : '[--]'} Tier1 kernel-py dir ${result.tier1.kernelDir ?? '(packages-py/kernel-py not found)'}`,
 	);
 	if (result.tier1.kernelDir) {
 		lines.push(
-			`${result.tier1.kernelReady ? '[ok]' : '[--]'} Tier1 依赖同步（.venv）${
-				result.tier1.kernelReady ? '' : '—— cd packages-py/kernel-py && uv sync'
+			`${result.tier1.kernelReady ? '[ok]' : '[--]'} Tier1 dependencies synced (.venv)${
+				result.tier1.kernelReady ? '' : ' — cd packages-py/kernel-py && uv sync'
 			}`,
 		);
 		if (result.tier1.importCheck) {
 			lines.push(
-				`${result.tier1.importCheck === 'ok' ? '[ok]' : '[FAIL]'} Tier1 import 深检 ${result.tier1.importCheck === 'ok' ? '' : result.tier1.importCheck}`,
+				`${result.tier1.importCheck === 'ok' ? '[ok]' : '[FAIL]'} Tier1 deep import check: ${result.tier1.importCheck === 'ok' ? '' : result.tier1.importCheck}`,
 			);
 		}
 	}
 	lines.push(
-		`${result.disk.freeGB === null ? '[--]' : result.disk.freeGB > 2 ? '[ok]' : '[FAIL]'} 磁盘剩余 ${result.disk.freeGB ?? '?'} GB（${result.disk.path}）`,
+		`${result.disk.freeGB === null ? '[--]' : result.disk.freeGB > 2 ? '[ok]' : '[FAIL]'} disk free ${result.disk.freeGB ?? '?'} GB (${result.disk.path})`,
 	);
-	for (const f of result.tier0.failures) lines.push(`  详情: ${f}`);
-	lines.push(result.tier0Ok ? '结论: Tier0 基线可用；Tier1 ' + (result.tier1.kernelReady && result.tier1.importCheck === 'ok' ? '就绪' : '未就绪（可选）') : '结论: Tier0 基线异常，工具不可用 —— 重新安装 meshify 或检查 Node 版本');
+	for (const f of result.tier0.failures) lines.push(`  detail: ${f}`);
+	lines.push(result.tier0Ok ? 'Summary: Tier0 baseline usable; Tier1 ' + (result.tier1.kernelReady && result.tier1.importCheck === 'ok' ? 'ready' : 'not ready (optional)') : 'Summary: Tier0 baseline broken, the tool is unusable — reinstall meshify or check the Node version');
 	process.stdout.write(lines.join('\n') + '\n');
 	if (!result.tier1.uv) {
 		process.stdout.write(
-			'Tier1 安装指引：\n  meshify doctor --install-uv\n  cd ' +
+			'Tier1 install guide:\n  meshify doctor --install-uv\n  cd ' +
 				path.join('packages-py', 'kernel-py') +
-				' && uv sync\n  国内镜像: set UV_DEFAULT_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple\n',
+				' && uv sync\n  PyPI mirror (mainland China): set UV_DEFAULT_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple\n',
 		);
 	}
 }

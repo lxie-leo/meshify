@@ -19,11 +19,11 @@ export function sniffInputFormat(inputPath: string): InputFormat {
 	} catch (err) {
 		throw new MeshifyError(
 			EXIT_INPUT_UNREADABLE,
-			`输入文件不存在或不可读: ${inputPath}（${err instanceof Error ? err.message : String(err)}）`,
+			`Input file missing or unreadable: ${inputPath} (${err instanceof Error ? err.message : String(err)})`,
 		);
 	}
 	if (!stat.isFile()) {
-		throw new MeshifyError(EXIT_INPUT_UNREADABLE, `输入不是常规文件: ${inputPath}`);
+		throw new MeshifyError(EXIT_INPUT_UNREADABLE, `Input is not a regular file: ${inputPath}`);
 	}
 
 	const hasKnownExt = /\.(glb|gltf|obj|stl|ply|step|stp)$/i.test(inputPath);
@@ -36,7 +36,7 @@ export function sniffInputFormat(inputPath: string): InputFormat {
 		if (fmt === 'unknown') {
 			throw new MeshifyError(
 				EXIT_FORMAT_UNSUPPORTED,
-				`无法识别输入格式: ${path.basename(inputPath)}。支持: GLB / GLTF / OBJ / STL / PLY / STEP(STP)。`,
+				`Cannot recognize the input format: ${path.basename(inputPath)}. Supported: GLB / GLTF / OBJ / STL / PLY / STEP(STP).`,
 			);
 		}
 		return fmt;
@@ -50,7 +50,7 @@ export function assertOutputFormat(to: string): asserts to is 'glb' | 'gltf' | '
 	if (!['glb', 'gltf', 'obj', 'stl', 'ply'].includes(to)) {
 		throw new MeshifyError(
 			EXIT_FORMAT_UNSUPPORTED,
-			`不支持的输出格式: ${to}。可选: glb / gltf / obj / stl / ply。`,
+			`Unsupported output format: ${to}. Options: glb / gltf / obj / stl / ply.`,
 		);
 	}
 }

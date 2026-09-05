@@ -31,12 +31,12 @@ export function registerLod(program: Command): void {
 	addCommonOptions(
 		program
 			.command('lod')
-			.description('多级 LOD 链：lod_0 原样 + lod_i 按 --ratio^i 逐级简化（每级独立文件）')
-			.argument('<input>', '输入模型（glb/gltf/obj/stl/ply）')
-			.option('--levels <n>', '级数（含 lod_0，≥2，默认 3）', '3')
-			.option('--ratio <n>', '每级保留面比例（几何级数，默认 0.5 → 100%/50%/25%）', '0.5')
-			.option('--error <n>', '简化误差上限（归一化，默认 0.01）', '0.01')
-			.option('--min-faces <n>', '小于该面数的子网格跳过简化（默认 200）', '200'),
+			.description('Multi-level LOD chain: lod_0 as-is + lod_i simplified at --ratio^i (one file per level)')
+			.argument('<input>', 'input model (glb/gltf/obj/stl/ply)')
+			.option('--levels <n>', 'level count (including lod_0, ≥2, default 3)', '3')
+			.option('--ratio <n>', 'fraction of faces kept per level (geometric series; default 0.5 → 100%/50%/25%)', '0.5')
+			.option('--error <n>', 'simplification error bound (normalized, default 0.01)', '0.01')
+			.option('--min-faces <n>', 'skip simplifying submeshes below this face count (default 200)', '200'),
 	).action(withFailureManifest('lod', 'lod', async (input: string, cmdOpts: Record<string, unknown>) => {
 		const opts = cmdOpts as GlobalOptions & Record<string, unknown>;
 		const startedAt = Date.now();
@@ -56,13 +56,13 @@ export function registerLod(program: Command): void {
 		const route = await routeTier('lod', input, format, opts, { params, op: 'lod', multi: true });
 		if (route.handled) return;
 
-		progress('读取输入…');
+		progress('Loading input…');
 		const loaded = await loadInput(input, format);
 		assertResourceLimits(loaded.bytes, loaded.inputInfo.faces, { force: !!opts.force });
 		assertProcessableGeometry(loaded.inputInfo, 'lod');
 		const beforeBytes = opts.previewHtml ? await documentToGlbBytes(loaded.doc) : null;
 
-		progress(`生成 LOD 链（${levels} 级）…`);
+		progress(`Building LOD chain (${levels} levels)…`);
 		const result = await generateLodLevels(loaded.doc, {
 			levels,
 			ratio,
@@ -88,18 +88,18 @@ export function registerLod(program: Command): void {
 			});
 			files.push(fileEntryOf(p, 'lod'));
 		}
-		progressDone(`LOD 链完成：${lodSummaries.map((l) => `L${l.level}:${l.faces}`).join('，')}`);
+		progressDone(`LOD chain done: ${lodSummaries.map((l) => `L${l.level}:${l.faces}`).join(', ')}`);
 
 		const main = lodSummaries[0];
 		const totalBytes = lodSummaries.reduce((s, l) => s + l.bytes, 0);
 		const stats = await documentStats(result.levels[0].document);
 
 		if (opts.previewHtml && beforeBytes) {
-			progress('生成预览页…');
+			progress('Generating preview page…');
 			const htmlPath = om.claim(om.previewPath(main.path));
 			writePreviewHtml({
-				before: [{ label: '原始', bytes: beforeBytes }],
-				after: result.levels.slice(1).map((l) => ({ label: `LOD${l.level}（${Math.round(l.ratio * 100)}%）`, bytes: readBytes(lodSummaries[l.level].path) })),
+				before: [{ label: 'Input', bytes: beforeBytes }],
+				after: result.levels.slice(1).map((l) => ({ label: `LOD${l.level} (${Math.round(l.ratio * 100)}%)`, bytes: readBytes(lodSummaries[l.level].path) })),
 				report: draftOf({
 					command: 'lod',
 					input: loaded.inputInfo,
@@ -120,7 +120,7 @@ export function registerLod(program: Command): void {
 				outPath: htmlPath,
 			});
 			files.push(fileEntryOf(htmlPath, 'preview'));
-			progressDone(`预览页 ${htmlPath}`);
+			progressDone(`Preview page: ${htmlPath}`);
 		}
 
 		emitReport(

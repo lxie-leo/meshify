@@ -24,7 +24,7 @@ def lod_file(
     overwrite: bool = False,
 ) -> Dict[str, Any]:
     if levels < 2 or levels > 16:
-        raise param_conflict(f"--levels 需在 2..16，收到: {levels}")
+        raise param_conflict(f"--levels must be in 2..16, got: {levels}")
 
     import os
     import shutil
@@ -48,17 +48,18 @@ def lod_file(
         warnings.append(
             warn(
                 "ORPHAN_GEOMETRY_ATTACHED",
-                f"输入含 {len(attached)} 个未挂载进场景图的孤儿几何（多 scene GLB 的非默认 scene），"
-                f"已显式挂载防止层级链丢失: {', '.join(attached[:8])}{'…' if len(attached) > 8 else ''}",
+                f"Input contains {len(attached)} orphan geometries not mounted in the scene graph "
+                f"(non-default scenes of a multi-scene GLB); attached explicitly to prevent loss along the LOD chain: "
+                f"{', '.join(attached[:8])}{'…' if len(attached) > 8 else ''}",
             )
         )
     v, f = step_svc.scene_totals(scene)
     if f == 0:
-        raise ValueError("输入不含任何三角面，无法生成 LOD 链")
+        raise ValueError("Input contains no triangles; cannot build a LOD chain")
 
     out0 = str(Path(output_dir) / "part_000.glb")
     if os.path.exists(out0) and not overwrite:
-        raise param_conflict(f"输出已存在: {out0}（默认不覆盖；确认覆盖请加 --overwrite）")
+        raise param_conflict(f"Output already exists: {out0} (not overwritten by default; pass --overwrite to replace)")
 
     if Path(input_path).suffix.lower() == ".glb" and not attached:
         # 无孤儿的 GLB 字节直拷（lod_0 语义 = 原样）；其余格式不能直拷
@@ -74,7 +75,7 @@ def lod_file(
     for level in range(1, levels):
         out_path = str(Path(output_dir) / f"part_{level:03d}.glb")
         if os.path.exists(out_path) and not overwrite:
-            raise param_conflict(f"输出已存在: {out_path}（默认不覆盖；确认覆盖请加 --overwrite）")
+            raise param_conflict(f"Output already exists: {out_path} (not overwritten by default; pass --overwrite to replace)")
         result = simplify_svc.simplify_file(
             stage_input,
             out_path,
@@ -118,7 +119,7 @@ def lod_file(
         "vertices": total_v,
         "faces": total_f,
         "warnings": warnings,
-        "tier_note": f"lod: {levels} 级（级联 ratio={ratio}）",
+        "tier_note": f"lod: {levels} levels (cascading ratio={ratio})",
     }
 
 

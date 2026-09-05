@@ -17,8 +17,8 @@ export function registerInspect(program: Command): void {
 	addCommonOptions(
 		program
 			.command('inspect')
-			.description('分析模型：格式/顶点面数/子网格/材质/纹理/包围盒/疑似问题（只读，无输出文件）')
-			.argument('<input>', '输入模型（glb/gltf/obj/stl/ply；step 需 Tier1）'),
+			.description('Analyze a model: format/vertex-face counts/submeshes/materials/textures/bbox/suspected issues (read-only, no artifact file)')
+			.argument('<input>', 'input model (glb/gltf/obj/stl/ply; step needs Tier1)'),
 		{ noOutput: true },
 	).action(withFailureManifest('inspect', 'inspect', async (input: string, cmdOpts: Record<string, unknown>) => {
 		const opts = cmdOpts as GlobalOptions;
@@ -30,9 +30,9 @@ export function registerInspect(program: Command): void {
 		const route = await routeTier('inspect', input, format, opts, { params: {}, op: 'inspect' });
 		if (route.handled) return;
 
-		progress('读取并分析模型…');
+		progress('Loading and analyzing model…');
 		const loaded = await loadInput(input, format);
-		progressDone(`分析完成（${loaded.inputInfo.meshes.length} 子网格）`);
+		progressDone(`Analysis done (${loaded.inputInfo.meshes.length} submeshes)`);
 
 		const om = new OutputManager(input);
 		emitReport(

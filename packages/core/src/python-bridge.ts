@@ -104,11 +104,11 @@ export async function runPythonKernel(payload: PyPayload, opts: { timeoutMs?: nu
 	if (!kernelDir) {
 		throw new MeshifyError(
 			EXIT_EXECUTOR_UNAVAILABLE,
-			'未找到 kernel-py 目录（packages-py/kernel-py）。Tier1 需要仓库内 Python 内核，可通过 MESHIFY_PY_KERNEL_DIR 指定。',
+			'kernel-py directory not found (packages-py/kernel-py). Tier1 requires the in-repo Python kernel; point MESHIFY_PY_KERNEL_DIR at it.',
 		);
 	}
 	if (!hasUv()) {
-		throw new MeshifyError(EXIT_EXECUTOR_UNAVAILABLE, 'uv 不可用，无法启动 Tier1。请先安装 uv（meshify doctor --install-uv）。');
+		throw new MeshifyError(EXIT_EXECUTOR_UNAVAILABLE, 'uv unavailable; cannot start Tier1. Install uv first (meshify doctor --install-uv).');
 	}
 
 	const tmp = path.join(os.tmpdir(), `meshify-payload-${process.pid}-${Date.now()}.json`);
@@ -126,13 +126,13 @@ export async function runPythonKernel(payload: PyPayload, opts: { timeoutMs?: nu
 			});
 			const timer = setTimeout(() => {
 				child.kill();
-				reject(new MeshifyError(7, `Tier1 执行超时（>${Math.round((opts.timeoutMs ?? 600_000) / 1000)}s）`));
+				reject(new MeshifyError(7, `Tier1 timed out (>${Math.round((opts.timeoutMs ?? 600_000) / 1000)}s)`));
 			}, opts.timeoutMs ?? 600_000);
 			child.stdout.on('data', (d: Buffer) => (stdout += d.toString()));
 			child.stderr.on('data', (d: Buffer) => (stderr += d.toString()));
 			child.on('error', (err) => {
 				clearTimeout(timer);
-				reject(new MeshifyError(EXIT_EXECUTOR_UNAVAILABLE, `无法启动 uv: ${err.message}`));
+				reject(new MeshifyError(EXIT_EXECUTOR_UNAVAILABLE, `Failed to spawn uv: ${err.message}`));
 			});
 			child.on('close', (code) => {
 				clearTimeout(timer);
@@ -151,14 +151,14 @@ export async function runPythonKernel(payload: PyPayload, opts: { timeoutMs?: nu
 	if (!parsed) {
 		throw new MeshifyError(
 			EXIT_INTERNAL,
-			`Tier1 输出无法解析为 manifest JSON。stdout 前 500 字符: ${stdout.slice(0, 500)}\nstderr 前 500 字符: ${stderr.slice(0, 500)}`,
+			`Tier1 stdout could not be parsed as manifest JSON. First 500 chars of stdout: ${stdout.slice(0, 500)}\nFirst 500 chars of stderr: ${stderr.slice(0, 500)}`,
 		);
 	}
 	const validated = validateReport(parsed);
 	if (!validated.ok) {
 		throw new MeshifyError(
 			EXIT_INTERNAL,
-			`Tier1 manifest 未通过 schema 校验: ${validated.errors.issues.map((i) => i.path.join('.')).join(', ')}`,
+			`Tier1 manifest failed schema validation: ${validated.errors.issues.map((i) => i.path.join('.')).join(', ')}`,
 		);
 	}
 	return { report: validated.report as MeshifyReport, stderr };

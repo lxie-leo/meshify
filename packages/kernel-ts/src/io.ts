@@ -117,7 +117,7 @@ export async function tier0SelfCheck(): Promise<Tier0SelfCheck> {
 		const mod = await import('earcut');
 		const tris = mod.default([0, 0, 1, 0, 1, 1], undefined, 2);
 		earcutOk = tris.length === 3;
-		if (!earcutOk) failures.push('earcut: 自检三角化结果异常');
+		if (!earcutOk) failures.push('earcut: self-check triangulation returned unexpected results');
 	} catch (err) {
 		failures.push(`earcut: ${err instanceof Error ? err.message : String(err)}`);
 	}

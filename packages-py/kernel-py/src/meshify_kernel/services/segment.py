@@ -43,10 +43,10 @@ def segment_file(
     elif mode == "connected":
         parts, warnings = _segment_connected(input_path, min_faces)
     else:
-        raise ValueError(f"不支持的分割模式: {mode}")
+        raise ValueError(f"Unsupported segment mode: {mode}")
 
     if not parts:
-        raise ValueError("分割未产生任何部件")
+        raise ValueError("Segmentation produced no parts")
 
     written: List[Dict[str, Any]] = []
     total_v = 0
@@ -65,7 +65,7 @@ def segment_file(
         "vertices": total_v,
         "faces": total_f,
         "warnings": warnings,
-        "tier_note": f"{mode}: {len(parts)} 部件" + ("（截面 earcut 封口）" if mode == "plane" and cap else ""),
+        "tier_note": f"{mode}: {len(parts)} parts" + (" (cross-section earcut capped)" if mode == "plane" and cap else ""),
     }
 
 
@@ -75,9 +75,9 @@ def _guard_overwrite(out_path: str, overwrite: bool, input_path: str) -> None:
 
     # normcase：Windows 大小写不敏感文件系统上 PROOF.glb == proof.glb
     if os.path.normcase(os.path.abspath(out_path)) == os.path.normcase(os.path.abspath(input_path)):
-        raise ValueError(f"输出路径与输入相同: {out_path}")
+        raise ValueError(f"Output path equals input: {out_path}")
     if os.path.exists(out_path) and not overwrite:
-        raise FileExistsError(f"输出已存在: {out_path}（默认不覆盖；确认覆盖请加 --overwrite）")
+        raise FileExistsError(f"Output already exists: {out_path} (not overwritten by default; pass --overwrite to replace)")
 
 
 # ------------------------------------------------------------------
@@ -170,7 +170,7 @@ def _attach_material(src_mesh, dst_mesh, warnings) -> None:
         uv = getattr(visual, "uv", None)
         if uv is not None:
             warnings.append(
-                warn("UV_REMAP_APPROXIMATED", f"{getattr(dst_mesh, 'metadata', {}).get('name', 'part')}: 分割重组顶点 UV 最近邻重映射（近似）")
+                warn("UV_REMAP_APPROXIMATED", f"{getattr(dst_mesh, 'metadata', {}).get('name', 'part')}: UVs of recombined vertices remapped by nearest neighbor (approximate)")
             )
             dst_mesh.visual.uv = mu.split_uv_seam(dst_mesh, uv)
 
@@ -183,7 +183,7 @@ def _attach_material(src_mesh, dst_mesh, warnings) -> None:
         from trimesh.visual.texture import TextureVisuals
 
         dst_mesh.visual = TextureVisuals(material=PBRMaterial(baseColorFactor=[255, 255, 255, 255], doubleSided=True))
-    warnings.append(warn("DOUBLE_SIDED_FORCED", "分割产物材质强制 doubleSided（开口壳防背面剔除）"))
+    warnings.append(warn("DOUBLE_SIDED_FORCED", "Segment output materials forced doubleSided (open shells vs. backface culling)"))
 
 
 # ------------------------------------------------------------------
@@ -248,12 +248,12 @@ def _segment_plane(
 
     solids, src_meshes, face_src = _load_solids(file_path)
     if not solids:
-        raise ValueError("模型不包含三角面")
+        raise ValueError("Model contains no triangles")
 
     # axis+position → 世界系平面（与 kernel-ts resolvePlane 同一映射）
     if origin is None or normal is None:
         if not axis:
-            raise ValueError("平面定义缺失：需要 axis+position 或 origin+normal")
+            raise ValueError("Plane definition missing: need axis+position or origin+normal")
         all_bounds = np.array([s[0].bounds for s in solids])
         lo = all_bounds[:, 0].min(axis=0)
         hi = all_bounds[:, 1].max(axis=0)
@@ -278,12 +278,12 @@ def _segment_plane(
             if side is not None and len(side.faces) > 0:
                 if cap:
                     # 坑 6：earcut 封口可能产生零面积碎片三角形——保留（删了会开洞）
-                    warnings.append(warn("FRAGMENT_FACES_KEPT", "截面封口的零面积碎片三角形原样保留（渲染不可见，删除会开洞）"))
+                    warnings.append(warn("FRAGMENT_FACES_KEPT", "Zero-area fragment triangles from cross-section capping kept as-is (invisible when rendered; removing them opens holes)"))
                 _attach_material(src, side, warnings)
                 parts.append(side)
 
     if len(parts) < 2:
-        raise ValueError("切割平面未将模型分成两部分，请调整平面位置")
+        raise ValueError("Cut plane does not split the model into two parts; adjust the plane position")
     return parts, warnings
 
 
@@ -320,7 +320,7 @@ def _segment_connected(file_path: str, min_faces: int) -> Tuple[List[Any], List[
         parts = [solid]
     if dropped:
         warnings.append(
-            warn("SMALL_PARTS_DROPPED", f"连通域分割：{dropped} 个面数 < {min_faces} 的碎片部件被丢弃")
+            warn("SMALL_PARTS_DROPPED", f"connected split: {dropped} fragment parts with < {min_faces} faces dropped")
         )
     return parts, warnings
 

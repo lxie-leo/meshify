@@ -34,10 +34,10 @@ export function registerConvert(program: Command): void {
 	addCommonOptions(
 		program
 			.command('convert')
-			.description('格式转换：glb/gltf/obj/stl/ply 互转；STEP(STP) 读入需 Tier1（--tier py 或已安装时 auto）')
-			.argument('<input>', '输入模型（glb/gltf/obj/stl/ply/step/stp）')
-			.option('--to <format>', '目标格式: glb | gltf | obj | stl | ply（必填，默认产物 GLB 最通用）')
-			.option('--up-axis <axis>', 'STEP 输入的部件朝上轴: x|y|z（可加 - 前缀反向，默认 z=CAD 惯例）或 auto（按安装孔等几何特征自动判定；低置信时 exit 4 并列出候选）。源文件里躺着建模的部件用它扶正'),
+			.description('Format conversion among glb/gltf/obj/stl/ply; STEP(STP) input requires Tier1 (--tier py, or auto when installed)')
+			.argument('<input>', 'input model (glb/gltf/obj/stl/ply/step/stp)')
+			.option('--to <format>', 'target format: glb | gltf | obj | stl | ply (required; the default GLB artifact is the most universal)')
+			.option('--up-axis <axis>', 'Up axis of the part in the STEP input: x|y|z (a leading - flips; default z = CAD convention) or auto (auto-detected from geometric features such as mounting holes; low confidence → exit 4 with candidates listed). Use it to upright parts authored lying down in the source file'),
 	).action(withFailureManifest('convert', (o) => `converted-${String(o.to ?? 'glb').toLowerCase()}`, async (input: string, cmdOpts: Record<string, unknown>) => {
 		const opts = cmdOpts as GlobalOptions & Record<string, unknown>;
 		const startedAt = Date.now();
@@ -49,7 +49,7 @@ export function registerConvert(program: Command): void {
 		if (to === format) {
 			throw new MeshifyError(
 				EXIT_PARAM_CONFLICT,
-				`输入已是 ${to} 格式（${input}）。转换到同格式无意义；如需重新编码请先转中间格式。`,
+				`Input is already ${to} (${input}). Converting to the same format is meaningless; go through an intermediate format if you need re-encoding.`,
 			);
 		}
 		// -o 扩展名必须与 --to 一致：不一致会把 STL 字节写进 .glb 名文件（坏产物留盘）
@@ -58,7 +58,7 @@ export function registerConvert(program: Command): void {
 			if (outExt !== to) {
 				throw new MeshifyError(
 					EXIT_PARAM_CONFLICT,
-					`-o 输出扩展名 .${outExt || '(无)'} 与 --to ${to} 不一致，产物应是 .${to} 文件。请修正 -o 路径或去掉 -o 用默认命名。`,
+					`-o extension .${outExt || '(none)'} does not match --to ${to}; the artifact should be a .${to} file. Fix the -o path, or drop -o to use the default naming.`,
 				);
 			}
 		}
@@ -70,13 +70,13 @@ export function registerConvert(program: Command): void {
 			if (!/^(-?[xyz]|auto)$/.test(upAxis)) {
 				throw new MeshifyError(
 					EXIT_PARAM_CONFLICT,
-					`--up-axis 取值应为 x|y|z（可加 - 前缀表示反向）或 auto，收到: ${opts.upAxis}`,
+					`--up-axis must be x|y|z (optionally - prefixed to flip) or auto, got: ${opts.upAxis}`,
 				);
 			}
 			if (format !== 'step') {
 				throw new MeshifyError(
 					EXIT_PARAM_CONFLICT,
-					`--up-axis 仅对 STEP 输入有效（当前输入为 ${format}；其余格式按各自生态惯例处理朝向）`,
+					`--up-axis only applies to STEP input (this input is ${format}; other formats handle orientation per their own ecosystem conventions)`,
 				);
 			}
 			params.up_axis = upAxis;
@@ -86,7 +86,7 @@ export function registerConvert(program: Command): void {
 		const route = await routeTier('convert', input, format, opts, { params, op, ext: to });
 		if (route.handled) return;
 
-		progress('读取输入…');
+		progress('Loading input…');
 		const loaded = await loadInput(input, format);
 		assertResourceLimits(loaded.bytes, loaded.inputInfo.faces, { force: !!opts.force });
 		const beforeBytes = opts.previewHtml ? await documentToGlbBytes(loaded.doc) : null;
@@ -97,7 +97,7 @@ export function registerConvert(program: Command): void {
 
 		const files: ReturnType<typeof fileEntryOf>[] = [];
 		const companionFiles: string[] = []; // 伴生资源（.bin/贴图/.mtl）——manifest files[] 必须齐备，Agent 按它拷产物
-		progress(`转换 → ${to}…`);
+		progress(`Converting → ${to}…`);
 		if (to === 'glb' || to === 'gltf') {
 			await writeDocument(loaded.doc, outPath);
 			if (to === 'gltf') {
@@ -130,7 +130,7 @@ export function registerConvert(program: Command): void {
 				companionFiles.push(path.join(path.dirname(outPath), img.name));
 			}
 		}
-		progressDone(`转换完成 → ${outPath}`);
+		progressDone(`Conversion done → ${outPath}`);
 
 		// 输出统计：obj/stl/ply 读回后统计（转换保真，指标以实际产物为准）。
 		// 空场景例外：stl/ply 读取器把「0 面产物」按坏文件抛错，读回校验会把
@@ -138,7 +138,7 @@ export function registerConvert(program: Command): void {
 		let afterLoaded: Awaited<ReturnType<typeof loadInput>> | null = null;
 		if (loaded.inputInfo.faces === 0) {
 			loaded.warnings.push(
-				warn('EMPTY_SCENE_OUTPUT', '输入为空场景（0 面），产物是同格式的合法空文件'),
+				warn('EMPTY_SCENE_OUTPUT', 'Input is an empty scene (0 faces); the output is a valid empty file of the same format'),
 			);
 		} else {
 			try {
@@ -146,7 +146,7 @@ export function registerConvert(program: Command): void {
 			} catch (err) {
 				throw new MeshifyError(
 					EXIT_INTERNAL,
-					`转换产物读回失败（${outPath}）: ${err instanceof Error ? err.message : String(err)}`,
+					`Failed to read back the converted artifact (${outPath}): ${err instanceof Error ? err.message : String(err)}`,
 				);
 			}
 		}
@@ -165,11 +165,11 @@ export function registerConvert(program: Command): void {
 		const warnings = [...loaded.warnings, ...route.warnings, ...(afterLoaded?.warnings ?? [])];
 
 		if (opts.previewHtml && beforeBytes) {
-			progress('生成预览页…');
+			progress('Generating preview page…');
 			const htmlPath = om.claim(om.previewPath(outPath));
 			writePreviewHtml({
-				before: [{ label: `原始（${format}）`, bytes: beforeBytes }],
-				after: [{ label: `转换产物（${to}，读回预览）`, bytes: await documentToGlbBytes(afterLoaded?.doc ?? loaded.doc) }],
+				before: [{ label: `Input (${format})`, bytes: beforeBytes }],
+				after: [{ label: `Converted output (${to}, read-back preview)`, bytes: await documentToGlbBytes(afterLoaded?.doc ?? loaded.doc) }],
 				report: draftOf({
 					command: 'convert',
 					input: loaded.inputInfo,
@@ -182,7 +182,7 @@ export function registerConvert(program: Command): void {
 				outPath: htmlPath,
 			});
 			files.push(fileEntryOf(htmlPath, 'preview'));
-			progressDone(`预览页 ${htmlPath}`);
+			progressDone(`Preview page: ${htmlPath}`);
 		}
 
 		emitReport(
