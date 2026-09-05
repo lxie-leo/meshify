@@ -1,34 +1,39 @@
 # meshify-kernel (Tier1)
 
-meshify 的 Python 增强内核。CLI 通过
+> English | [简体中文](README.zh-CN.md)
+
+The Python augmentation kernel of meshify. The CLI invokes it as a one-shot subprocess:
 
 ```
 uv run python -m meshify_kernel <payload.json>
 ```
 
-以一次性子进程调用本内核；stdout 输出完整 `meshify.report/v1` manifest，
-进程退出码 = manifest.exit_code（语义与 TS 侧一致）。
+stdout carries the full `meshify.report/v1` manifest; the process exit code equals
+manifest.exit_code (same semantics as the TS side).
 
-## 能力
+## Capabilities
 
-- **STEP/STP CAD 读取**（gmsh OpenCASCADE 内核，按颜色分组、独立 PBR 材质）
-  —— Tier0 无法处理，是 Tier1 存在的首要原因
-- QEM 简化（pyfqmr，逐子网格保材质 + UV 最近邻重映射）
-- 三模式分割（connected / plane / semantic，跨子网格焊接）
-- 五投影 UV 贴图（uv/planar/cylindrical/spherical/box）
-- 格式转换（glb/gltf/obj/stl/ply）
-- LOD 链、optimize（无压缩基线：几何压缩属 Tier0 WASM 能力，显式披露而非假装）
+- **STEP/STP CAD reading** (gmsh OpenCASCADE kernel, grouped by color with independent PBR
+  materials) — Tier0 cannot do this; it is the primary reason Tier1 exists
+- QEM simplification (pyfqmr, per-submesh with materials kept + nearest-neighbor UV remapping)
+- Three segmentation modes (connected / plane / semantic, with cross-submesh welding)
+- Five-projection UV texturing (uv/planar/cylindrical/spherical/box)
+- Format conversion (glb/gltf/obj/stl/ply)
+- LOD chains, optimize (uncompressed baseline: geometry compression is a Tier0 WASM capability;
+  output writes `TIER_DOWNGRADED`)
 
-## 安装
+## Install
 
 ```
 cd packages-py/kernel-py
 uv sync
 ```
 
-国内网络可先配置镜像：`set UV_DEFAULT_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple`
+On slow links to PyPI (mainland China), configure a mirror first:
+`set UV_DEFAULT_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple`
 
-## 服务层来源
+## Origin of the service layer
 
-迁移自 maestro backend `services/model_edit/`（简化/分割/贴图/STEP），
-剥离 FastAPI/DB；几何算法与防坑逻辑原样保留，警告改为契约警告码写入 manifest。
+Migrated from the maestro backend `services/model_edit/` (simplify/segment/texture/STEP),
+with FastAPI/DB stripped out; geometry algorithms and pitfall guards are preserved as-is, and
+warnings became contract warning codes in the manifest.

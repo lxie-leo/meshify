@@ -1,48 +1,53 @@
-# optimize —— Web 交付一键优化
+# optimize — one-command web delivery
 
-## 语法
+> English | [简体中文](zh-CN/optimize.md)
+
+## Syntax
 
 ```
 meshify optimize <input> [--ratio 0.5] [--error 0.01] [--compression meshopt]
                   [--texture-format webp] [--texture-size 2048] [--min-faces 200]
 ```
 
-| 参数 | 默认 | 说明 |
+| Parameter | Default | Notes |
 |---|---|---|
-| `--ratio <n>` | 不简化 | 传入才做简化（与 simplify 同参数语义） |
-| `--error <n>` | 0.01 | 简化误差上限 |
-| `--compression` | meshopt | `meshopt` / `draco` / `none`。draco 需可选依赖，缺失时跳过并 `DRACO_UNAVAILABLE` |
-| `--texture-format` | webp | `webp` / `jpeg` / `png` / `none`（不动贴图）。glTF 核心 GPU 上限 2048 的兼容性最好 |
-| `--texture-size <n>` | 不限 | 贴图最长边上限，超出降采样（坑 11：降采样必须披露 `TEXTURE_DOWNSCALED`） |
-| `--min-faces <n>` | 200 | 简化跳过阈值 |
+| `--ratio <n>` | no simplification | Simplifies only when given (same semantics as simplify) |
+| `--error <n>` | 0.01 | Simplification error bound |
+| `--compression` | meshopt | `meshopt` / `draco` / `none`. draco needs an optional dependency; when missing it is skipped with `DRACO_UNAVAILABLE` |
+| `--texture-format` | webp | `webp` / `jpeg` / `png` / `none` (leave textures alone). webp capped at the glTF core GPU limit of 2048 has the best compatibility |
+| `--texture-size <n>` | unlimited | Max texture long edge; larger textures are downsampled (pitfall 11: downsampling must disclose `TEXTURE_DOWNSCALED`) |
+| `--min-faces <n>` | 200 | Simplification skip threshold |
 
-## 管线顺序（Tier0）
+## Pipeline order (Tier0)
 
 ```
-去重(weld) → 修剪(prune) → [可选简化] → [贴图压缩/降采样] → meshopt|draco 几何压缩
+weld → prune → [optional simplify] → [texture compression/downscaling] → meshopt|draco geometry compression
 ```
 
-顺序遵循 gltf-transform 规范：weld 先行（合并索引提高压缩率），prune 收尾清孤立资源。
+The order follows gltf-transform conventions: weld first (merged indices compress better), prune
+last to clear orphaned resources.
 
-## Tier1（--tier py）边界
+## Tier1 (--tier py) boundary
 
-meshopt/draco 是 WASM 编码器（Tier0 专属）。Tier1 路线输出**未压缩基线**并写
-`TIER_DOWNGRADED` 披露——需要压缩时别加 `--tier py`。
+meshopt/draco are WASM encoders (Tier0 only). The Tier1 route outputs an **uncompressed baseline**
+and writes a `TIER_DOWNGRADED` disclosure — don't pass `--tier py` when you need compression.
 
-## 产物
+## Output
 
-`<输入名>.meshify/<输入名>.optimized.glb`；`--preview-html` 附对比页。
+`<input-name>.meshify/<input-name>.optimized.glb`; `--preview-html` adds a comparison page.
 
-## 报告要点
+## Report highlights
 
 ```jsonc
 "metrics": { "face_reduction": 0.5, "byte_reduction": 0.82 }
 ```
 
-体积削减主要来自贴图（WebP + 降采样）；几何 meshopt 通常再省 30–60% 顶点buffer。
+Most of the size reduction comes from textures (WebP + downscaling); meshopt geometry typically
+saves another 30–60% of the vertex buffer.
 
-## 预览页（--preview-html）
+## Preview page (--preview-html)
 
-自包含单文件 HTML（GLB base64 内嵌，three.js 走 CDN）：
-双视窗联动旋转、缺 NORMAL 网格自动 flatShading（坑 10）、按贴图亮度调环境光防过曝（坑 11）、
-右下角 manifest 指标面板。给用户看效果/自查降级直接开这个文件。
+A self-contained single HTML file (GLB embedded as base64, three.js from a CDN): two linked
+viewports, automatic flatShading for meshes missing NORMAL (pitfall 10), ambient light adapted to
+average texture brightness to prevent blowout (pitfall 11), and a manifest metrics panel in the
+bottom-right corner. Open this file to show the user the result or to check for degradation.

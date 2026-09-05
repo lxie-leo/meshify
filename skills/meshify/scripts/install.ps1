@@ -1,6 +1,6 @@
-﻿# meshify skill 安装器（Windows PowerShell）
-# 用法：powershell -ExecutionPolicy ByPass -File install.ps1 [-Mode all|cli-only|skill-only]
-# 行为：探测宿主 skills 目录 -> 复制 SKILL.md + references/ -> 构建未编译的 CLI -> doctor 摘要
+﻿# meshify skill installer (Windows PowerShell)
+# Usage: powershell -ExecutionPolicy ByPass -File install.ps1 [-Mode all|cli-only|skill-only]
+# Behavior: detect host skills dirs -> copy SKILL.md + references/ -> build the CLI if needed -> doctor summary
 param(
     [ValidateSet('all', 'cli-only', 'skill-only')]
     [string]$Mode = 'all'
@@ -9,10 +9,10 @@ param(
 $ErrorActionPreference = 'Stop'
 $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $SkillDir = Split-Path -Parent $Here                    # skills\meshify
-$RepoRoot = Split-Path -Parent (Split-Path -Parent $SkillDir)  # 仓库根
+$RepoRoot = Split-Path -Parent (Split-Path -Parent $SkillDir)  # repo root
 
 # ------------------------------------------------------------------
-# 1. 宿主探测
+# 1. host detection
 # ------------------------------------------------------------------
 function Get-Hosts {
     $candidates = @(
@@ -38,16 +38,16 @@ function Install-Skill($target) {
 }
 
 # ------------------------------------------------------------------
-# 2. CLI 构建
+# 2. CLI build
 # ------------------------------------------------------------------
 function Build-Cli {
     $dist = Join-Path $RepoRoot 'packages\cli\dist\index.js'
     if (-not (Test-Path $dist)) {
-        Write-Host '  构建内核与 CLI（pnpm install + tsc）…'
+        Write-Host '  Building kernel and CLI (pnpm install + tsc)...'
         Push-Location $RepoRoot
         try {
             if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
-                throw '需要 pnpm（npm i -g pnpm）'
+                throw 'pnpm is required (npm i -g pnpm)'
             }
             pnpm install --silent
             Push-Location packages\core; npx tsc -p tsconfig.json; Pop-Location
@@ -57,10 +57,10 @@ function Build-Cli {
     }
 }
 
-Write-Host 'meshify skill 安装器'
+Write-Host 'meshify skill installer'
 
 if ($Mode -in 'all', 'skill-only') {
-    Write-Host '探测宿主 skills 目录…'
+    Write-Host 'Detecting host skills directories...'
     foreach ($hostDir in Get-Hosts) { Install-Skill $hostDir }
 }
 
@@ -68,12 +68,12 @@ if ($Mode -in 'all', 'cli-only') {
     Build-Cli
     $cli = Join-Path $RepoRoot 'packages\cli\bin\meshify.js'
     if (Test-Path $cli) {
-        Write-Host '  环境自检：'
+        Write-Host '  Environment check:'
         & node $cli doctor
     } else {
-        Write-Host '  [--] CLI 未构建（-Mode cli-only 可单独构建）'
+        Write-Host '  [--] CLI not built (-Mode cli-only builds it alone)'
     }
 }
 
-Write-Host '完成。验证：node packages\cli\bin\meshify.js inspect <model.glb>'
-Write-Host 'Tier1（STEP/CAD）按需安装：meshify doctor --install-uv; cd packages-py\kernel-py; uv sync'
+Write-Host 'Done. Verify: node packages\cli\bin\meshify.js inspect <model.glb>'
+Write-Host 'Tier1 (STEP/CAD) on demand: meshify doctor --install-uv; cd packages-py\kernel-py; uv sync'

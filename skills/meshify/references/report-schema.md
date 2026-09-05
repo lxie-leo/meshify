@@ -1,22 +1,25 @@
-# report-schema —— meshify.report/v1 字段文档
+# report-schema — meshify.report/v1 field reference
 
-权威定义：`packages/core/src/schema.ts`（zod，运行时校验）与其导出的 JSON Schema
-（draft-07，ajv 交叉校验）。本文是解读向摘要；两份 schema 定义由契约测试强制一致。
+> English | [简体中文](zh-CN/report-schema.md)
 
-## 顶层
+Authoritative definitions: `packages/core/src/schema.ts` (zod, runtime validation) and the JSON
+Schema it exports (draft-07, cross-checked by ajv). This document is a reading-oriented summary;
+the two schema definitions are kept identical by contract tests.
 
-| 字段 | 类型 | 说明 |
+## Top level
+
+| Field | Type | Notes |
 |---|---|---|
-| `schema` | `"meshify.report/v1"` | 契约版本 |
+| `schema` | `"meshify.report/v1"` | contract version |
 | `tool` | `{name, version, tier}` | `tier`: `ts-wasm` \| `python-uv` |
 | `command` | string | inspect/simplify/segment/texture/convert/lod/optimize |
-| `input` | InputInfo | 输入侧统计 |
-| `output` | OutputInfo \| null | inspect 为 null |
-| `params` | object | 命令参数原样回显（CLI 组装值，非用户原始字符串） |
-| `metrics` | Metrics | 削减/误差/部件/LOD/耗时 |
-| `warnings` | Warning[] | 显式降级披露（码表见 troubleshooting.md） |
-| `errors` | string[] | 非空即失败 |
-| `exit_code` | int | 与进程退出码一致 |
+| `input` | InputInfo | input-side statistics |
+| `output` | OutputInfo \| null | null for inspect |
+| `params` | object | command parameters echoed as the CLI assembled them (not the user's raw strings) |
+| `metrics` | Metrics | reduction/error/parts/LOD/duration |
+| `warnings` | Warning[] | explicit degradation disclosures (code table in troubleshooting.md) |
+| `errors` | string[] | non-empty means failure |
+| `exit_code` | int | matches the process exit code |
 
 ## InputInfo
 
@@ -24,46 +27,47 @@
 
 - `meshes[]`: `{name, vertices, faces, material(null|string), has_uv, has_normals, skipped?}`
 - `textures[]`: `{uri, mime(null), bytes, resolution(null|"WxH")}`
-- `bbox`: `[[minX,minY,minZ],[maxX,maxY,maxZ]]` 或 null（空几何）
-- `has_animation`: 含 animations/skins（Tier1 路线恒 false——路由层已拦截）
+- `bbox`: `[[minX,minY,minZ],[maxX,maxY,maxZ]]` or null (empty geometry)
+- `has_animation`: has animations/skins (always false on the Tier1 route — intercepted by routing)
 
 ## OutputInfo
 
 `path` `format` `bytes` `vertices` `faces` `files[]`
 
-- `bytes`: 主产物单文件大小（多部件命令为部件字节总和）
-- `files[]`: `{path, bytes, role}`，role ∈ `asset|preview|report|part|lod`
-  ——Agent 拿全部产物路径的唯一来源
+- `bytes`: size of the main artifact file (sum of part bytes for multi-part commands)
+- `files[]`: `{path, bytes, role}`, role ∈ `asset|preview|report|part|lod`
+  — the single source of artifact paths for the agent
 
 ## Metrics
 
-| 字段 | 出现于 | 说明 |
+| Field | Appears in | Notes |
 |---|---|---|
-| `duration_ms` | 全部 | 耗时（必有） |
-| `face_reduction` | 产出面数的命令 | 1 - out_faces/in_faces（数学口径，**可为负**：产物面数多于输入时，如空输入 0 面转出几何、或封口/合并引入新面；判定削减与否看符号而非数值大小） |
-| `byte_reduction` | 同上 | 1 - out_bytes/in_bytes（绑贴图后可为负） |
-| `ratio_actual` | simplify | 实际保留面比（受 min-faces 跳过影响） |
-| `max_error_normalized` | Tier0 simplify | 归一化几何偏差上界（meshopt error 语义） |
-| `parts[]` | segment | `{index, path, vertices, faces}` 逐部件 |
-| `lod_levels[]` | lod | `{level, path, faces, vertices, bytes, ratio}` 逐级 |
-| `derives_from` | 派生产物 | 源文件路径 |
-| `tier_note` | 全部 | 本次路由/执行说明（文字说明） |
+| `duration_ms` | all | duration (always present) |
+| `face_reduction` | commands that output faces | 1 - out_faces/in_faces (mathematical definition, **can be negative**: the output may have more faces than the input, e.g. geometry produced from a 0-face empty input, or faces introduced by capping/merging; judge by the sign, not the magnitude) |
+| `byte_reduction` | same as above | 1 - out_bytes/in_bytes (can be negative after binding textures) |
+| `ratio_actual` | simplify | fraction of faces actually kept (affected by min-faces skips) |
+| `max_error_normalized` | Tier0 simplify | normalized geometric error upper bound (meshopt error semantics) |
+| `parts[]` | segment | `{index, path, vertices, faces}` per part |
+| `lod_levels[]` | lod | `{level, path, faces, vertices, bytes, ratio}` per level |
+| `derives_from` | derived artifacts | source file path |
+| `tier_note` | all | routing/execution note for this run (free text) |
 
-## 消费建议（Agent）
+## How to consume it (agent)
 
-1. `exit_code !== 0` → 按码行动（troubleshooting.md 的动作表）
-2. `errors[]` 非空 → 即使 exit 0 也要读（部分成功场景 exit 7 时 errors 有详情）
-3. 验收看 `metrics.face_reduction/byte_reduction`；质量存疑看 `max_error_normalized`
-4. 交付产物路径从 `output.files[]` 取（不要自己拼路径）
-5. `warnings` 里出现 `MATERIAL_DEGRADED_TO_BASE_COLOR`/`TIER_DOWNGRADED` 时，
-   向用户说明降级原因与规避方式（对应 references 文档）
+1. `exit_code !== 0` → act by code (the action table in troubleshooting.md)
+2. `errors[]` non-empty → read it even when exit is 0 (partial-success scenarios carry details there at exit 7)
+3. Verify effect via `metrics.face_reduction/byte_reduction`; quality doubts → `max_error_normalized`
+4. Take artifact paths from `output.files[]` (don't assemble paths yourself)
+5. When `warnings` contains `MATERIAL_DEGRADED_TO_BASE_COLOR`/`TIER_DOWNGRADED`, explain the
+   degradation and the way around it to the user (see the matching references doc)
 
-## 失败也产出 manifest（早失败最小报告）
+## Failures also produce a manifest (minimal early-failure report)
 
-TS 侧命令在 MeshifyError 早失败（输入不可读/参数冲突/同格式守卫/空场景等）时，
-rethrow 前尽力落一份最小 manifest：`output: null`、`params: {failed_early: true}`、
-`errors: [原因]`、`exit_code` 与进程退出码一致；输入结构未知时 `input.vertices/faces`
-为 0 兜底（不代表真实统计）。`--json` 下 stdout 照常输出完整 JSON——**stdout 的
-manifest 契约在成功与失败路径上一致**，Agent 统一按「解析 stdout → 失败看
-errors[] + exit_code」处理。Tier1 路径的失败 manifest 由 py runner 组装（信息更全，
-input 为实测统计），TS 桥原样转发。
+On the TS side, when a command fails early via MeshifyError (unreadable input, parameter
+conflict, same-format guard, empty scene, ...), a minimal manifest is written before the rethrow:
+`output: null`, `params: {failed_early: true}`, `errors: [reason]`, `exit_code` matching the
+process exit code; when the input structure is unknown, `input.vertices/faces` are zeroed as a
+fallback (not real statistics). Under `--json`, stdout still carries the full JSON — **the stdout
+manifest contract is identical on success and failure paths**; the agent always "parses stdout
+first, and on failure reads errors[] + exit_code". The Tier1 failure manifest is assembled by the
+Python runner (richer information, input stats measured), and the TS bridge forwards it verbatim.

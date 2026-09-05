@@ -1,60 +1,67 @@
-# segment —— 三模式分割
+# segment — three split modes
 
-## 语法
+> English | [简体中文](zh-CN/segment.md)
+
+## Syntax
 
 ```
-meshify segment <input> --mode <connected|plane|semantic> [选项]
+meshify segment <input> --mode <connected|plane|semantic> [options]
 ```
 
-### connected（连通域拆件——装配体首选）
+### connected (connected components — first choice for assemblies)
 
 ```
 meshify segment model.glb --mode connected [--min-faces 1]
 ```
 
-共享边连通域；Tier1 会先跨子网格按位置焊接再拆「实体」（CAD 颜色分组的断壳重新缝合）。
-`--min-faces <n>`：小于该面数的碎片部件丢弃（`SMALL_PARTS_DROPPED`；全部会被丢时保留最大者）。
+Components connected through shared edges. Tier1 first welds across submeshes by position, then
+splits into "solids" (re-stitching the broken shells that CAD color grouping produces).
+`--min-faces <n>`: fragment parts below this face count are dropped (`SMALL_PARTS_DROPPED`; if all
+parts would be dropped, the largest one is kept).
 
-### plane（平面切割）
+### plane (plane cut)
 
 ```
-meshify segment model.glb --mode plane --axis x --position 0       # 滑块语义
-meshify segment model.glb --mode plane --origin "0,10,0" --normal "0,1,0"   # 原生坐标
+meshify segment model.glb --mode plane --axis x --position 0       # slider semantics
+meshify segment model.glb --mode plane --origin "0,10,0" --normal "0,1,0"   # native coordinates
 ```
 
-- `--axis x|y|z` + `--position ∈ [-1,1]`：线性映射包围盒两端（-1 = min，0 = 中点，+1 = max）
-- `--origin` + `--normal`：任意平面（两参数必须成对；与 axis 互斥）
-- `--no-cap`：关闭截面封口（默认开启 earcut 封口保水密，切片/3D 打印场景务必保持默认）
-- **坑 5/6 防护**：封口零面积碎片三角形原样保留（`FRAGMENT_FACES_KEPT`，渲染不可见，删了会开洞）
+- `--axis x|y|z` + `--position ∈ [-1,1]`: linear mapping across the bounding box (-1 = min, 0 = midpoint, +1 = max)
+- `--origin` + `--normal`: arbitrary plane (the two must be given together; mutually exclusive with axis)
+- `--no-cap`: disables cut-face capping (on by default: earcut capping keeps parts watertight; keep
+  the default for slicing and 3D-printing workflows)
+- **Pitfall 5/6 guards**: zero-area fragment triangles produced by capping are kept as-is
+  (`FRAGMENT_FACES_KEPT`); they are invisible when rendered, and removing them opens holes
 
-### semantic（法线+位置聚类）
+### semantic (normal + position clustering)
 
 ```
 meshify segment model.glb --mode semantic [--clusters 8]
 ```
 
-**边界（如实披露）**：semantic 认的是「朝向+位置」不是零件语义。平面/曲面/朝向分区有效；
-装配体拆成独立零件请用 connected。
+**Boundary**: semantic clusters by orientation + position, not by part identity. It works for
+partitioning flat/curved/differently oriented regions; to split an assembly into individual parts,
+use connected.
 
-## 产物
+## Output
 
-- Tier0：单 GLB `<输入名>.segment-<mode>.glb`（每部件一个节点；semantic 附黄金角部件着色）
-- Tier1：目录 `<输入名>.segment-<mode>/part_000.glb …`（manifest.parts 逐件披露路径/面数）
+- Tier0: a single GLB `<input-name>.segment-<mode>.glb` (one node per part; semantic adds golden-angle part coloring)
+- Tier1: directory `<input-name>.segment-<mode>/part_000.glb …` (manifest.parts discloses path/face count per part)
 
-## 报告要点
+## Report highlights
 
 ```jsonc
 "metrics": {
   "parts": [ { "index": 0, "path": "part_000.glb", "vertices": 23890, "faces": 47772 } ],
-  "tier_note": "plane: 2 部件（截面 earcut 封口）"
+  "tier_note": "plane: 2 parts (cut faces capped with earcut)"
 }
 ```
 
-## 防护（内嵌的 maestro 实坑）
+## Built-in guards (from real-world pitfalls)
 
-| 坑 | 默认行为 | 警告码 |
+| Pitfall | Default behavior | Warning code |
 |---|---|---|
-| 坑 3 开口壳背面剔除 | 分割件材质强制 doubleSided | `DOUBLE_SIDED_FORCED` |
-| 坑 5 切口烂面锯齿 | earcut 封口保水密 | （封口失败时 `NON_MANIFOLD_INPUT`） |
-| 坑 6 碎片三角形 | 零面积面保留不开洞 | `FRAGMENT_FACES_KEPT` |
-| 坑 4 CAD 断壳 | Tier1 跨子网格焊接后拆实体 | — |
+| 3: backface culling on open shells | Split parts get doubleSided materials forced | `DOUBLE_SIDED_FORCED` |
+| 5: jagged broken faces at the cut | earcut capping keeps parts watertight | (`NON_MANIFOLD_INPUT` when capping fails) |
+| 6: fragment triangles | Zero-area faces kept, no holes opened | `FRAGMENT_FACES_KEPT` |
+| 4: CAD broken shells | Tier1 welds across submeshes, then splits solids | — |

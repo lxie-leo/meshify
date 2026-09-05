@@ -48,7 +48,7 @@ function toBase64(bytes: Uint8Array): string {
 }
 
 const HTML_TEMPLATE = `<!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <title>meshify preview</title>
@@ -83,15 +83,15 @@ const HTML_TEMPLATE = `<!doctype html>
   <header>
     <b>meshify preview</b>
     <span id="head-cmd"></span>
-    <span>拖动旋转 · 滚轮缩放 · 右键平移（双视窗联动）</span>
+    <span>Drag to rotate · Scroll to zoom · Right-drag to pan (linked viewports)</span>
   </header>
   <div id="panes">
-    <div class="pane" id="pane-before"><div class="tag">BEFORE · 原始</div></div>
-    <div class="pane" id="pane-after"><div class="tag">AFTER · 产物</div></div>
+    <div class="pane" id="pane-before"><div class="tag">BEFORE · input</div></div>
+    <div class="pane" id="pane-after"><div class="tag">AFTER · output</div></div>
   </div>
 </div>
 <div id="metrics"></div>
-<div id="status"><div id="status-msg">加载中…</div><div id="status-sub" style="font-size:12px;color:#5c6b82"></div></div>
+<div id="status"><div id="status-msg">Loading…</div><div id="status-sub" style="font-size:12px;color:#5c6b82"></div></div>
 <script>
 var DATA = __DATA__;
 
@@ -117,7 +117,7 @@ function pickCdn() {
   ];
   var idx = 0;
   function tryNext() {
-    if (idx >= bases.length) return Promise.reject(new Error('three.js CDN 不可达（jsdelivr / unpkg 均失败）。预览页需要网络加载 three.js，请联网后重试。'));
+    if (idx >= bases.length) return Promise.reject(new Error('three.js CDN unreachable (jsdelivr and unpkg both failed). The preview page loads three.js from the network; check the connection and reopen.'));
     var base = bases[idx++];
     return fetch(base + 'package.json', { method: 'HEAD' })
       .then(function (r) { if (!r.ok) throw new Error('bad'); return base; })
@@ -332,29 +332,29 @@ function renderMetrics(report) {
   var rows = [];
   function row(k, v) { rows.push('<div class="row"><span>' + k + '</span><span>' + v + '</span></div>'); }
   var m = report.metrics || {};
-  row('命令', report.command);
+  row('Command', report.command);
   row('Tier', report.tool && report.tool.tier);
-  row('耗时', ((m.duration_ms || 0) / 1000).toFixed(2) + ' s');
-  if (report.input) row('输入面数', (report.input.faces || 0).toLocaleString());
+  row('Time', ((m.duration_ms || 0) / 1000).toFixed(2) + ' s');
+  if (report.input) row('Input faces', (report.input.faces || 0).toLocaleString());
   if (report.output) {
-    row('输出面数', (report.output.faces || 0).toLocaleString());
-    row('输入体积', fmtBytes(report.input.bytes));
-    row('输出体积', fmtBytes(report.output.bytes));
+    row('Output faces', (report.output.faces || 0).toLocaleString());
+    row('Input size', fmtBytes(report.input.bytes));
+    row('Output size', fmtBytes(report.output.bytes));
   }
-  if (m.face_reduction !== undefined) row('面数削减', (100 * m.face_reduction).toFixed(1) + '%');
-  if (m.byte_reduction !== undefined) row('体积削减', (100 * m.byte_reduction).toFixed(1) + '%');
-  if (m.max_error_normalized !== undefined) row('最大误差(归一化)', m.max_error_normalized.toPrecision(3));
-  if (m.parts) row('部件数', String(m.parts.length));
-  if (m.lod_levels) row('LOD 级数', String(m.lod_levels.length));
-  var html = '<h3>指标</h3>' + rows.join('');
+  if (m.face_reduction !== undefined) row('Face reduction', (100 * m.face_reduction).toFixed(1) + '%');
+  if (m.byte_reduction !== undefined) row('Size reduction', (100 * m.byte_reduction).toFixed(1) + '%');
+  if (m.max_error_normalized !== undefined) row('Max error (normalized)', m.max_error_normalized.toPrecision(3));
+  if (m.parts) row('Parts', String(m.parts.length));
+  if (m.lod_levels) row('LOD levels', String(m.lod_levels.length));
+  var html = '<h3>Metrics</h3>' + rows.join('');
   if (report.warnings && report.warnings.length) {
-    html += '<h3 style="margin-top:10px">警告 (' + report.warnings.length + ')</h3>';
+    html += '<h3 style="margin-top:10px">Warnings (' + report.warnings.length + ')</h3>';
     for (var i = 0; i < report.warnings.length; i++) {
       var w = report.warnings[i];
       html += '<div class="warn">[' + w.code + '] ' + escapeHtml(w.message) + '</div>';
     }
   }
-  html += '<div style="margin-top:10px;color:#5c6b82">完整报告见 .report.json</div>';
+  html += '<div style="margin-top:10px;color:#5c6b82">Full report: .report.json</div>';
   el.innerHTML = html;
   document.getElementById('head-cmd').textContent =
     report.command + ' · ' + (report.input ? report.input.format : '');
@@ -372,16 +372,16 @@ function escapeHtml(s) {
 }
 
 function main() {
-  if (!DATA.report) { setStatus('预览数据缺失'); return; }
+  if (!DATA.report) { setStatus('Missing preview data'); return; }
   // before 无可渲染形态（STEP 等输入）：切单视窗，只展示产物侧
   if (!DATA.before.length) {
     document.getElementById('panes').classList.add('single');
-    document.querySelector('#pane-after .tag').textContent = 'AFTER · 产物（原始输入无可视化格式）';
+    document.querySelector('#pane-after .tag').textContent = 'AFTER · output (input has no renderable format)';
     var hint = document.querySelector('header span:last-of-type');
-    if (hint) hint.textContent = '拖动旋转 · 滚轮缩放 · 右键平移';
+    if (hint) hint.textContent = 'Drag to rotate · Scroll to zoom · Right-drag to pan';
   }
   renderMetrics(DATA.report);
-  setStatus('加载 three.js…');
+  setStatus('Loading three.js…');
   var THREE, GLTFLoader, RoomEnvironment;
   return pickCdn().then(function (base) {
     var map = document.createElement('script');
@@ -390,7 +390,7 @@ function main() {
       imports: { three: base + 'build/three.module.js', 'three/addons/': base + 'examples/jsm/' }
     });
     document.head.appendChild(map);
-    setStatus('初始化渲染器…');
+    setStatus('Initializing renderer…');
     return import('three').then(function (mod1) {
       THREE = mod1;
       return import('three/addons/loaders/GLTFLoader.js');
@@ -399,14 +399,14 @@ function main() {
       return import('three/addons/environments/RoomEnvironment.js');
     }).then(function (mod3) {
       RoomEnvironment = mod3.RoomEnvironment;
-      setStatus('解析模型…');
+      setStatus('Parsing models…');
       return boot(THREE, GLTFLoader, RoomEnvironment);
     });
   }).then(function () {
     var el = document.getElementById('status');
     el.style.display = 'none';
   }).catch(function (err) {
-    setStatus('预览初始化失败：' + (err && err.message ? err.message : String(err)), '', true);
+    setStatus('Preview failed to initialize: ' + (err && err.message ? err.message : String(err)), '', true);
   });
 }
 

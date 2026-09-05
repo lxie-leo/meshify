@@ -1,10 +1,10 @@
 #!/usr/bin/env sh
-# meshify skill 安装器（Unix）
-# 用法：sh install.sh [--cli-only|--skill-only]
-# 行为：
-#   1. 探测 Agent 宿主 skills 目录（.claude/.cursor/.agents/…，存在即装）
-#   2. 复制 SKILL.md + references/ 到各宿主目录
-#   3. 仓库内构建 CLI（未构建时）并跑 meshify doctor 写安装摘要
+# meshify skill installer (Unix)
+# Usage: sh install.sh [--cli-only|--skill-only]
+# Behavior:
+#   1. Detect agent host skills directories (.claude/.cursor/.agents/..., install wherever found)
+#   2. Copy SKILL.md + references/ into each host directory
+#   3. Build the CLI in-repo (if not built yet) and run meshify doctor for a summary
 set -eu
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -51,9 +51,9 @@ install_skill() {
 # ------------------------------------------------------------------
 build_cli() {
 	if [ ! -f "$REPO_ROOT/packages/cli/dist/index.js" ]; then
-		echo "  构建内核与 CLI（pnpm install + tsc）…"
+		echo "  Building kernel and CLI (pnpm install + tsc)..."
 		cd "$REPO_ROOT"
-		command -v pnpm >/dev/null 2>&1 || { echo "  [FAIL] 需要 pnpm（npm i -g pnpm）"; exit 1; }
+		command -v pnpm >/dev/null 2>&1 || { echo "  [FAIL] pnpm is required (npm i -g pnpm)"; exit 1; }
 		pnpm install --silent
 		(cd packages/core && npx tsc -p tsconfig.json)
 		(cd packages/kernel-ts && npx tsc -p tsconfig.json)
@@ -67,17 +67,17 @@ build_cli() {
 run_doctor() {
 	CLI="$REPO_ROOT/packages/cli/bin/meshify.js"
 	if [ -f "$CLI" ]; then
-		echo "  环境自检："
+		echo "  Environment check:"
 		node "$CLI" doctor || true
 	else
-		echo "  [--] CLI 未构建（--cli-only 可单独构建）"
+		echo "  [--] CLI not built (--cli-only builds it alone)"
 	fi
 }
 
-echo "meshify skill 安装器"
+echo "meshify skill installer"
 
 if [ "$MODE" = "all" ] || [ "$MODE" = "skill-only" ]; then
-	echo "探测宿主 skills 目录…"
+	echo "Detecting host skills directories..."
 	for host in $(detect_hosts); do
 		install_skill "$host"
 	done
@@ -88,5 +88,5 @@ if [ "$MODE" = "all" ] || [ "$MODE" = "cli-only" ]; then
 	run_doctor
 fi
 
-echo "完成。验证：node packages/cli/bin/meshify.js inspect <model.glb>"
-echo "Tier1（STEP/CAD）按需安装：meshify doctor --install-uv && cd packages-py/kernel-py && uv sync"
+echo "Done. Verify: node packages/cli/bin/meshify.js inspect <model.glb>"
+echo "Tier1 (STEP/CAD) on demand: meshify doctor --install-uv && cd packages-py/kernel-py && uv sync"

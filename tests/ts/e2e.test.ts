@@ -88,9 +88,9 @@ describe('Agent 工作流 E2E', () => {
 		const html = fs.readFileSync(preview.path, 'utf8');
 		// 数据注入完成：无未替换 token（__DATA__ / __THREE_VERSION__）
 		expect(html.match(/__(?:DATA|THREE_VERSION)__/g) ?? []).toEqual([]);
-		// 双视窗标签（BEFORE 原始 / AFTER 产物）
-		expect(html).toContain('BEFORE · 原始');
-		expect(html).toContain('AFTER · 产物');
+		// 双视窗标签（BEFORE input / AFTER output）
+		expect(html).toContain('BEFORE · input');
+		expect(html).toContain('AFTER · output');
 	// 相机纵横比随视窗同步（缺了会在宽视窗下横向拉伸，旋转时呈「哈哈镜」变形）
 		expect(html).toContain('updateProjectionMatrix');
 	// 地面网格按模型尺度生成 + 接地阴影（缺了模型悬空无参照，旋转迷向）
@@ -115,7 +115,7 @@ describe('Agent 工作流 E2E', () => {
 		// STEP 无浏览器渲染形态：before 空 + 单视窗降级样式在页内
 		expect(html).toContain('"before":[]');
 		expect(html).toContain('#panes.single #pane-before');
-		expect(html).toContain('AFTER · 产物');
+		expect(html).toContain('AFTER · output');
 		// 披露不缺席
 		expect(m.warnings.some((w: any) => w.code === 'PREVIEW_BEFORE_UNAVAILABLE')).toBe(true);
 	}, 180_000);

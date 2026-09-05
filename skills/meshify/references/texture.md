@@ -1,39 +1,45 @@
-# texture —— 五投影 UV + 贴图绑定
+# texture — five UV projections + texture binding
 
-## 语法
+> English | [简体中文](zh-CN/texture.md)
+
+## Syntax
 
 ```
 meshify texture <input> --map <mode> [--image tex.png] [--metallic 0] [--roughness 0.8]
 ```
 
-| `--map` | 投影 | 适用 |
+| `--map` | Projection | Good for |
 |---|---|---|
-| `uv` | 保留现有 UV | 输入已有正确 UV |
-| `planar` | XZ 平面俯视投影 | 平板/浮雕类 |
-| `cylindrical` | 柱面展开（Y 轴） | 杯子/管道；帽面自动改平面投影 |
-| `spherical` | 球面展开 | 球/近似球；帽面同上 |
-| `box` | 六朝向三平面，每面铺满 | 方块件/文字图表贴图（无 UV 时的自动回退） |
+| `uv` | Keep existing UVs | Input already has correct UVs |
+| `planar` | XZ planar, top-down | Flat plates, bas-relief shapes |
+| `cylindrical` | Unwrap around the Y axis | Cups, pipes; cap faces automatically switch to planar |
+| `spherical` | Unwrap onto a sphere | Spheres and near-spheres; cap faces as above |
+| `box` | Six-face triplanar, each face filled | Box-like parts, text and chart textures (the automatic fallback when no UVs exist) |
 
-## 行为
+## Behavior
 
-- `--map uv` 但模型无 UV → 自动盒式投影 + `AUTO_BOX_UV_GENERATED`（不静默）
-- UV 是合并产生的色块图集（≤64px 贴图特征）→ 忽略并盒式回退 + `ATLAS_UV_IGNORED`（坑 2）
-- `--image`：绑定 baseColor 贴图；非 PNG/JPEG（webp/tiff/bmp/gif）自动规范化转 PNG +
-  `TEXTURE_FORMAT_CONVERTED`（glTF 核心规范只内建 PNG/JPEG 两种位图）
-- `--map uv` 与 `--image` 互斥（保留旧 UV 无法保证贴图正确映射）——exit 4
-- `--metallic/--roughness`：覆盖所有材质的 PBR 标量
-- STL 等无材质输入：自动补默认材质保证贴图有落点
+- `--map uv` on a model without UVs → automatic box projection + `AUTO_BOX_UV_GENERATED`
+- UVs that are a color-block atlas from merging (signature: ≤64px textures) → ignored, box fallback
+  + `ATLAS_UV_IGNORED` (pitfall 2)
+- `--image`: binds a baseColor texture; non-PNG/JPEG inputs (webp/tiff/bmp/gif) are normalized to
+  PNG + `TEXTURE_FORMAT_CONVERTED` (the glTF core spec only bakes in PNG/JPEG bitmaps)
+- `--map uv` and `--image` are mutually exclusive (kept UVs give no guarantee the texture maps
+  correctly) — exit 4
+- `--metallic/--roughness`: PBR scalars applied to every material
+- Inputs without materials (STL etc.): a default material is added so the texture has something to bind to
 
-## Tier1 特有防护
+## Tier1-specific guards
 
-- 柱/球接缝：跨缝三角形 u 跨度 >0.5 时分裂接缝顶点（u-1），消除整图扫描拉花带
-- 帽面（近水平面）柱/球投影退化 → 改 XZ 平面投影铺满
+- Cylinder/sphere seams: triangles whose u spans >0.5 across the seam get their seam vertices split
+  (u-1), removing the smear band across the texture
+- Cap faces (near-horizontal) degenerate under cylinder/sphere projection → switched to a filled XZ planar projection
 
-## 产物
+## Output
 
-`<输入名>.meshify/<输入名>.textured.glb` + 报告。
+`<input-name>.meshify/<input-name>.textured.glb` + report.
 
-## 报告要点
+## Report highlights
 
-`warnings` 会列出全部近似决策（AUTO_BOX_UV_GENERATED / ATLAS_UV_IGNORED / TEXTURE_FORMAT_CONVERTED）。
-贴图后体积可能增大（纹理由外置变内嵌）——`byte_reduction` 为负是正常的。
+`warnings` lists every approximation decision (AUTO_BOX_UV_GENERATED / ATLAS_UV_IGNORED /
+TEXTURE_FORMAT_CONVERTED). Size can grow after texturing (textures move from external files into
+the GLB) — a negative `byte_reduction` is normal.

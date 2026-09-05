@@ -1,39 +1,45 @@
-# convert —— 格式转换
+# convert — format conversion
 
-## 语法
+> English | [简体中文](zh-CN/convert.md)
+
+## Syntax
 
 ```
 meshify convert <input> --to <glb|gltf|obj|stl|ply>
 ```
 
-`--to` 默认 `glb`（单文件最通用）。同格式转换被拒（exit 4）——重新编码请先转中间格式。
-`-o` 显式输出路径的扩展名必须与 `--to` 一致（否则 exit 4，防 STL 字节落进 .glb 名的坏产物）。
+`--to` defaults to `glb` (the most universal single-file form). Same-format conversion is refused
+(exit 4) — re-encode by way of an intermediate format. With `-o`, the explicit output path's
+extension must match `--to` (otherwise exit 4; this prevents STL bytes landing in a file named .glb).
 
-## 路线
+## Routes
 
-- **Tier0**（glb/gltf/obj/stl/ply 输入）：读入重建为 glTF Document 后导出
-  - OBJ 读入：自动找同名 `.mtl` 与引用贴图，材质转 PBR
-  - glTF 输出：外部 `.bin` 与贴图伴生落盘在产物同目录（manifest.files 逐个列出，搬运时一并带走）
-  - OBJ 输出：主文件 + `.mtl` + 伴生贴图（manifest.files 逐个列出）
-- **Tier1**（step/stp 输入，或 `--tier py`）：STEP 经 OCC 网格化 → 颜色分组 → 目标格式
-  （细节见 cad-step.md）
+- **Tier0** (glb/gltf/obj/stl/ply input): read, rebuild as a glTF Document, export
+  - OBJ input: the matching `.mtl` and referenced textures are picked up automatically; materials become PBR
+  - glTF output: the external `.bin` and textures land next to the artifact (manifest.files lists
+    every file; move them together)
+  - OBJ output: main file + `.mtl` + textures (manifest.files lists every file)
+- **Tier1** (step/stp input, or `--tier py`): STEP → OCC meshing → color grouping → target format
+  (details in cad-step.md)
 
-## 保真与披露
+## Fidelity and disclosure
 
-- 材质零丢失是硬约束（坑 1）；OBJ→GLB 等价材质合并时写 `MATERIALS_MERGED`
-- STL/PLY 无材质语义：转出 GLB 时只有几何（贴图请走 texture 命令）
-- 动画/蒙皮在 Tier0 路线结构性保留；`--tier py` 则会被 trimesh 丢弃（路由层已强制拦截）
-- obj/stl/ply 产物统计以读回验证为准（`metrics` 反映实际文件，非内存估计）
+- Zero material loss is a hard constraint (pitfall 1); merging equivalent materials on OBJ→GLB writes `MATERIALS_MERGED`
+- STL/PLY have no material semantics: converting them to GLB yields geometry only (use the texture command for textures)
+- Animation/skinning is structurally preserved on the Tier0 route; `--tier py` drops it (trimesh
+  pipeline; the routing layer intercepts this beforehand)
+- obj/stl/ply output stats are verified by reading the file back (`metrics` reflect the actual
+  file, not in-memory estimates)
 
-## 产物
+## Output
 
-`<输入名>.meshify/<输入名>.converted-<to>.<ext>`（OBJ 另有伴生文件）。
+`<input-name>.meshify/<input-name>.converted-<to>.<ext>` (OBJ adds sidecar files).
 
-## 常见组合
+## Common combinations
 
 ```bash
-meshify convert model.obj --to glb            # OBJ（含 mtl+贴图）打包成单文件
-meshify convert part.step --to glb            # CAD → Web（需 Tier1）
-meshify convert model.glb --to stl            # 交给切片软件
-meshify convert model.glb --to gltf           # 需要文本格式排查问题
+meshify convert model.obj --to glb            # OBJ (mtl + textures) packed into one file
+meshify convert part.step --to glb            # CAD → web (needs Tier1)
+meshify convert model.glb --to stl            # hand off to a slicer
+meshify convert model.glb --to gltf           # text format for troubleshooting
 ```

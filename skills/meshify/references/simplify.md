@@ -1,44 +1,48 @@
-# simplify —— QEM 减面
+# simplify — QEM decimation
 
-## 语法
+> English | [简体中文](zh-CN/simplify.md)
+
+## Syntax
 
 ```
 meshify simplify <input> [--ratio 0.5] [--target-faces N] [--error 0.01]
                   [--min-faces 200] [--aggressiveness 7] [--no-keep-border] [--merge]
 ```
 
-| 参数 | 默认 | 说明 |
+| Parameter | Default | Notes |
 |---|---|---|
-| `--ratio <n>` | 0.5 | 保留面数比例 (0.01–1]。与 `--target-faces` 二选一 |
-| `--target-faces <n>` | — | 精确目标面数（各子网格按比例分摊）。与 `--ratio` **互斥**，同时给出报 exit 4 |
-| `--error <n>` | 0.01 | 误差上限（归一化 0–1），简化误差超过此值的面保留 |
-| `--min-faces <n>` | 200 | 小于该面数的子网格跳过简化（外观退化风险大于收益），写 `SMALL_MESH_SKIPPED` |
-| `--aggressiveness <n>` | 7 | QEM 激进程度 1–10，越大越保守（Tier1 pyfqmr 语义） |
-| `--no-keep-border` | 开 | 关闭边界保留（开口壳边界可能被折叠掏空——一般别关） |
-| `--merge` | 关 | 跨子网格合并简化（丢子网格边界，材质按多数保留） |
+| `--ratio <n>` | 0.5 | Fraction of faces to keep, (0.01–1]. Mutually exclusive with `--target-faces` |
+| `--target-faces <n>` | — | Exact target face count (distributed proportionally across submeshes). Mutually exclusive with `--ratio`; passing both is exit 4 |
+| `--error <n>` | 0.01 | Error bound (normalized 0–1); faces whose simplification error exceeds it are kept |
+| `--min-faces <n>` | 200 | Submeshes below this face count are skipped (degradation risk outweighs the gain), writes `SMALL_MESH_SKIPPED` |
+| `--aggressiveness <n>` | 7 | QEM aggressiveness 1–10; higher is more conservative (Tier1 pyfqmr semantics) |
+| `--no-keep-border` | on | Disables border preservation (borders of open shells can collapse into holes — usually leave this on) |
+| `--merge` | off | Simplify across submeshes (drops submesh boundaries; majority material kept) |
 
-## 行为
+## Behavior
 
-- **逐子网格处理（坑 1 防护）**：多材质模型各子网格独立简化、材质原样保留，绝不合并成白模
-- **Tier0**（meshoptimizer WASM）：`--error` 生效，manifest 带 `max_error_normalized`
-- **Tier1**（pyfqmr）：`--aggressiveness` 生效；贴图网格不按位置焊接（保接缝双顶点），
-  塌缩点 UV 按最近三角面重心插值重映射（`UV_REMAP_APPROXIMATED`）
-- 动画/蒙皮输入强制 Tier0（`SKIN_ANIMATION_PRESERVED`）
+- **Per-submesh processing (pitfall 1 guard)**: every submesh of a multi-material model is
+  simplified independently with materials kept as-is; nothing collapses into an untextured white model
+- **Tier0** (meshoptimizer WASM): `--error` is active; the manifest carries `max_error_normalized`
+- **Tier1** (pyfqmr): `--aggressiveness` is active; textured meshes are not welded by position
+  (duplicate seam vertices are kept), and UVs of collapsed vertices are remapped by barycentric
+  interpolation over the nearest triangle (`UV_REMAP_APPROXIMATED`)
+- Animated/skinned input is forced to Tier0 (`SKIN_ANIMATION_PRESERVED`)
 
-## 产物
+## Output
 
-`<输入名>.meshify/<输入名>.simplified.glb` + 同名 `.report.json`。
+`<input-name>.meshify/<input-name>.simplified.glb` + a matching `.report.json`.
 
-## 报告要点
+## Report highlights
 
 ```jsonc
 "metrics": { "face_reduction": 0.7, "ratio_actual": 0.3, "max_error_normalized": 0.004 }
 ```
 
-`ratio_actual` 是实际保留比（受 min-faces 跳过影响可能高于请求值）。
+`ratio_actual` is the fraction actually kept (it can exceed the requested value when min-faces skips submeshes).
 
-## 建议
+## Advice
 
-- Web 展示：`--ratio 0.3 --error 0.01` 起步，看 `max_error_normalized` 不超过 0.01 再加码
-- 模型整体面数 < 1000 时别简化（收益小、退化明显；min-faces 会替你挡大部分）
-- 要更狠的减面 + 体积压缩：直接用 `optimize`（简化 + meshopt 一条管线）
+- Web display: start at `--ratio 0.3 --error 0.01`; push further only while `max_error_normalized` stays under 0.01
+- Don't simplify models under 1000 faces total (little gain, visible degradation; min-faces blocks most of it for you)
+- For heavier reduction plus size compression, go straight to `optimize` (simplification + meshopt in one pipeline)

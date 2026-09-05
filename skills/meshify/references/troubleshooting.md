@@ -1,69 +1,76 @@
-# troubleshooting —— 排障与警告码全表
+# troubleshooting — exit codes and full warning-code table
 
-## 退出码 → 动作
+> English | [简体中文](zh-CN/troubleshooting.md)
 
-| 码 | 含义 | Agent 下一步 |
+## Exit code → action
+
+| Code | Meaning | Agent's next step |
 |---|---|---|
-| 0 | 成功 | 读 manifest（warnings 也要读） |
-| 2 | 输入不可读 | 检查路径/权限；`meshify inspect` 验证 |
-| 3 | 格式不支持 | FBX 等先在 DCC 导 GLB |
-| 4 | 参数冲突/拒绝覆盖 | 看信息改参数；确认覆盖 `--overwrite` |
-| 5 | Tier1 不可用 | `meshify doctor --install-uv` → `uv sync`（cad-step.md） |
-| 6 | 算法失败 | 调平面位置/聚类数；或先 connected 拆件分批。空场景（0 面）也归此码 |
-| 7 | 资源超限/部分成功 | `--force` 一次或拆件 |
-| 8 | 内部错误 | 附 report.json 反馈 |
+| 0 | Success | Read the manifest (warnings included) |
+| 2 | Input unreadable | Check path/permissions; verify with `meshify inspect` |
+| 3 | Format unsupported | Export FBX etc. to GLB in a DCC first |
+| 4 | Parameter conflict / overwrite refused | Fix parameters per the message; add `--overwrite` to confirm |
+| 5 | Tier1 unavailable | `meshify doctor --install-uv` → `uv sync` (cad-step.md) |
+| 6 | Algorithm failure | Adjust plane position/cluster count; or connected-split first and work in batches. Empty scenes (0 faces) also use this code |
+| 7 | Resource limit / partial success | `--force` once, or split |
+| 8 | Internal error | Attach report.json to the bug report |
 
-## 警告码全表（全部是显式披露，不是失败）
+## Full warning-code table (warnings are not failures)
 
-| 码 | 场景 | 含义 |
+| Code | Context | Meaning |
 |---|---|---|
-| `SMALL_MESH_SKIPPED` | simplify/lod | 子网格 < min-faces，跳过简化原样保留（坑 12） |
-| `MATERIAL_DEGRADED_TO_BASE_COLOR` | Tier1 简化/分割 | UV 无法重映射，材质降级仅 baseColor 标量（贴图剥离） |
-| `UV_REMAP_APPROXIMATED` | Tier1 几何重建 | 塌缩/重组点 UV 按最近面重心插值（近似） |
-| `NON_MANIFOLD_INPUT` | plane 切割 | 输入疑似重合壳/非流形，截面未能闭合封口 |
-| `FRAGMENT_FACES_KEPT` | plane 封口 | 零面积碎片三角形保留（删了会开洞，坑 6） |
-| `DOUBLE_SIDED_FORCED` | 分割/贴图产物 | 材质强制双面（开口壳防背面剔除，坑 3） |
-| `TEXTURE_DOWNSCALED` | optimize | 贴图降采样（超过 `--texture-size`，坑 11） |
-| `TEXTURE_FORMAT_CONVERTED` | optimize/texture | 非 PNG/JPEG 贴图规范化转 PNG（glTF 核心只内建这两种位图格式） |
-| `TIER_DOWNGRADED` | tier 仲裁 | Tier1 不可用降级 Tier0 执行（STEP 除外——它直接 exit 5） |
-| `SKIN_ANIMATION_PRESERVED` | tier 仲裁 | 动画输入强制 Tier0 保留动画 |
-| `ATLAS_UV_IGNORED` | texture --map uv | 色块图集 UV 忽略，盒式回退（坑 2） |
-| `AUTO_BOX_UV_GENERATED` | texture --map uv | 无 UV 自动盒式投影 |
-| `PARTIAL_SUCCESS` | 多子网格处理 | 部分子网格失败（exit 7 伴随） |
-| `MATERIALS_MERGED` | OBJ→GLB / simplify --merge | 等价材质/同材质子网格自动合并（坑 1 相关） |
-| `MERGE_INCOMPATIBLE_FALLBACK` | simplify --merge | 同材质子网格顶点属性不兼容无法合并，回退逐子网格（几何/材质不受影响） |
-| `INDEX_OUT_OF_RANGE` | OBJ 读入 | 面引用越界（不存在的顶点/UV/法线索引），越界分量按默认值兜底 |
-| `SMALL_PARTS_DROPPED` | segment connected | 碎片部件丢弃（全丢时保留最大者） |
-| `DRACO_UNAVAILABLE` | optimize draco | draco3dgltf 可选依赖缺失，几何压缩跳过 |
-| `EMPTY_SCENE_OUTPUT` | convert | 输入空场景（0 面），产物是同格式的合法空文件（结构操作不拦截） |
-| `FORMAT_CONTENT_MISMATCH` | OBJ 读入 | 扩展名与二进制内容不符（如 STL 改名 .obj），按扩展名处理但解析结果可疑 |
-| `ORPHAN_GEOMETRY_ATTACHED` | convert/lod（Tier1） | 输入含未挂载进场景图的孤儿几何（多 scene GLB 的非默认 scene），已显式挂载防止导出丢失 |
-| `PREVIEW_BEFORE_UNAVAILABLE` | Tier1 `--preview-html` | 原始输入非 glb/gltf（如 STEP）浏览器无法渲染，预览页仅产物侧单视窗；产物非 GLB 时整页跳过 |
-| `UP_AXIS_NORMALIZED` | Tier1 全几何命令（STEP 输入） | STEP 坐标按 CAD 惯例视为 Z-up，产物已旋转为 glTF 规范 Y-up（几何形状不变，仅朝向规范化）。若部件在源文件里躺着建模（真实朝上轴非 Z），convert 时用 `--up-axis x\|-y` 等指定扶正 |
-| `UP_AXIS_AUTO` | convert `--up-axis auto` | 高置信自动判定成功：披露判定的朝上轴与几何依据（安装孔簇位置/数量），`params.up_axis_resolved` 为机器可读结论。低置信（对称件/无孔）时 exit 4 拒绝并列候选 |
+| `SMALL_MESH_SKIPPED` | simplify/lod | Submesh < min-faces, skipped and kept as-is (pitfall 12) |
+| `MATERIAL_DEGRADED_TO_BASE_COLOR` | Tier1 simplify/segment | UVs could not be remapped; material degraded to baseColor scalar only (textures stripped) |
+| `UV_REMAP_APPROXIMATED` | Tier1 geometry rebuild | UVs of collapsed/rebuilt points remapped by nearest-face barycentric interpolation (approximate) |
+| `NON_MANIFOLD_INPUT` | plane cut | Input looks like coincident shells / non-manifold; the cross-section could not be capped watertight |
+| `FRAGMENT_FACES_KEPT` | plane capping | Zero-area fragment triangles kept (removing them opens holes, pitfall 6) |
+| `DOUBLE_SIDED_FORCED` | segment/texture artifacts | Materials forced double-sided (open shells vs. backface culling, pitfall 3) |
+| `TEXTURE_DOWNSCALED` | optimize | Texture downsampled (exceeded `--texture-size`, pitfall 11) |
+| `TEXTURE_FORMAT_CONVERTED` | optimize/texture | Non-PNG/JPEG texture normalized to PNG (glTF core only bakes in these two bitmap formats) |
+| `TIER_DOWNGRADED` | tier routing | Tier1 unavailable, degraded to Tier0 execution (STEP excepted — it exits 5 directly) |
+| `SKIN_ANIMATION_PRESERVED` | tier routing | Animated input forced onto Tier0 to preserve animation |
+| `ATLAS_UV_IGNORED` | texture --map uv | Color-block atlas UVs ignored, box fallback (pitfall 2) |
+| `AUTO_BOX_UV_GENERATED` | texture --map uv | No UVs present, box projection generated automatically |
+| `PARTIAL_SUCCESS` | multi-submesh processing | Some submeshes failed ( accompanies exit 7) |
+| `MATERIALS_MERGED` | OBJ→GLB / simplify --merge | Equivalent materials / same-material submeshes merged automatically (related to pitfall 1) |
+| `MERGE_INCOMPATIBLE_FALLBACK` | simplify --merge | Same-material submeshes have incompatible vertex attributes and cannot merge; fell back to per-submesh (geometry/materials unaffected) |
+| `INDEX_OUT_OF_RANGE` | OBJ input | Face references an out-of-range index (nonexistent vertex/UV/normal); out-of-range components filled with defaults |
+| `SMALL_PARTS_DROPPED` | segment connected | Fragment parts dropped (if all would drop, the largest is kept) |
+| `DRACO_UNAVAILABLE` | optimize draco | draco3dgltf optional dependency missing; geometry compression skipped |
+| `EMPTY_SCENE_OUTPUT` | convert | Input is an empty scene (0 faces); the output is a valid empty file of the same format (structural operations don't block this) |
+| `FORMAT_CONTENT_MISMATCH` | OBJ input | Extension doesn't match binary content (e.g. an STL renamed .obj); processed by extension, but parse results are suspect |
+| `ORPHAN_GEOMETRY_ATTACHED` | convert/lod (Tier1) | Input contained orphan geometry not mounted in the scene graph (non-default scenes of a multi-scene GLB); explicitly attached to prevent loss on export |
+| `PREVIEW_BEFORE_UNAVAILABLE` | Tier1 `--preview-html` | Original input is not glb/gltf (e.g. STEP) and can't render in a browser; the preview page shows the artifact side only (single viewport); non-GLB artifacts skip the page entirely |
+| `UP_AXIS_NORMALIZED` | Tier1 geometry commands (STEP input) | STEP coordinates treated as Z-up per CAD convention; output rotated to the glTF-required Y-up (shape unchanged, orientation normalized only). If the part was authored lying down (real up axis not Z), pass `--up-axis x\|-y` etc. at convert time to upright it |
+| `UP_AXIS_AUTO` | convert `--up-axis auto` | High-confidence auto-detection succeeded: discloses the detected up axis and its geometric evidence (mounting-hole cluster position/count); `params.up_axis_resolved` is the machine-readable verdict. Low confidence (symmetric parts / no holes) → exit 4 with candidates listed |
 
-## 常见故障
+## Common failures
 
-**预览页白屏**：three.js CDN 不可达（页内自动 jsdelivr→unpkg 回退仍失败时显示错误层）——联网后重开。
+**Preview page is blank**: three.js CDN unreachable (the page falls back jsdelivr→unpkg and shows
+an error layer when both fail) — reconnect and reopen.
 
-**Tier1 import 深检 FAIL**：`cd packages-py/kernel-py && uv sync` 后重跑 `meshify doctor` 验证（doctor 每次都现场探测）。
+**Tier1 deep-import check FAILs**: run `cd packages-py/kernel-py && uv sync`, then `meshify doctor`
+again (doctor re-probes live every time).
 
-**简化后面数没降**：全是 < min-faces 的小子网格（看 warnings）；调低 `--min-faces` 或确认输入。
+**Face count didn't drop after simplify**: everything is small submeshes under min-faces (check
+warnings); lower `--min-faces` or double-check the input.
 
-**平面切割 exit 6「未与模型相交」**：`--position` 在 [-1,1] 之外或平面贴着包围盒表面；
-用 inspect 的 bbox 换算原生坐标走 `--origin/--normal`。
+**Plane cut exits 6 "does not intersect the model"**: `--position` outside [-1,1], or the plane
+grazes the bbox surface; use inspect's bbox to compute native coordinates and go with
+`--origin/--normal`.
 
-**Windows 下中文乱码**：CLI 输出 UTF-8；旧终端（cmd 默认 GBK）先 `chcp 65001`。
+**Garbled CJK output on Windows**: CLI output is UTF-8; old terminals (cmd defaults to GBK) need
+`chcp 65001` first.
 
-**重复执行报输出已存在**：默认不覆盖是特性（幂等安全）；确认要覆盖加 `--overwrite`，
-或换 `-o` 输出路径。
+**Re-running reports "output already exists"**: not overwriting by default is the feature
+(idempotent and safe); add `--overwrite` to confirm, or pick another `-o` path.
 
-**非 0 退出码也想拿 manifest**：早失败（输入不可读/参数冲突等）也会落最小 manifest
-（`params.failed_early=true`、`errors[]` 携带原因、`input.vertices/faces` 为 0 兜底）——
-`--json` 时 stdout 同样输出；Agent 不必只依赖退出码猜原因。
+**Wanting the manifest even on non-zero exits**: early failures (unreadable input, parameter
+conflict, ...) also write a minimal manifest (`params.failed_early=true`, `errors[]` carries the
+reason, `input.vertices/faces` zeroed as a fallback) — `--json` outputs it to stdout as usual.
 
-## 性能参考
+## Performance reference
 
-- Tier0 热启动 < 0.5s；100 万面 simplify ~10s（WASM 多线程视平台）
-- Tier1 冷启动 ~2s（uv run）；STEP 网格化与模型复杂度线性相关（10 万面级 ~5s）
-- 预览页生成 < 0.5s（大 GLB base64 内嵌会放大 HTML 体积，属预期）
+- Tier0 warm start < 0.5s; 1M-face simplify ~10s (WASM multi-threading varies by platform)
+- Tier1 cold start ~2s (uv run); STEP meshing scales with model complexity (~5s at the 100k-face level)
+- Preview page generation < 0.5s (large GLBs embedded as base64 inflate the HTML; expected)

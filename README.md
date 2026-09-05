@@ -1,78 +1,97 @@
 # Meshify
 
-> 三维模型轻量化与优化 Agent Skill —— 一条 `meshify` CLI 完成减面、拆件、贴图、格式转换、LOD 与 Web 交付优化，以**语义化退出码 + `meshify.report/v1` JSON 报告**作为 Agent 可靠消费的输出契约，**绝不静默降级**。
+> A 3D model optimization CLI: simplification, part splitting, texturing, format conversion, LOD,
+> and web-delivery compression through a single `meshify` command. Every run writes a
+> `meshify.report/v1` structured report and a semantic exit code for agents to consume.
+
+English | [简体中文](README.zh-CN.md)
 
 [![CI](https://github.com/lxie-leo/meshify/actions/workflows/ci.yml/badge.svg)](https://github.com/lxie-leo/meshify/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-informational.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A518.17-339933?logo=node.js&logoColor=white)](packages/cli/package.json)
-[![Tier0](https://img.shields.io/badge/Tier0-zero--python-646CFF?logo=typescript&logoColor=white)](#-双层内核-tiering)
+[![Tier0](https://img.shields.io/badge/Tier0-zero--python-646CFF?logo=typescript&logoColor=white)](#two-kernels-tiering)
 
-Meshify 把三维模型处理成 **Web / AR / 移动端可交付**的形态。它首先为 AI Agent（Claude Code、Cursor、Codex 等）设计：每条命令都产出结构化 manifest，任何降级（自动补 UV、贴图剥离、碎片面保留……）都以警告码显式披露——**Agent 依据报告决策，而非猜测**。同时也是开发者可直接使用的 `meshify` CLI。
+Meshify prepares 3D models for delivery on the web, AR, and mobile. It is designed first for AI
+agents (Claude Code, Cursor, Codex, and others): every command emits a structured manifest, and
+degradations such as generated UVs or stripped textures are always disclosed as warning codes in
+the report. It is also a CLI that developers can use directly.
 
-**输入格式**：`glb` / `gltf` / `obj` / `stl` / `ply` 开箱即用；`step` / `stp`（CAD）走 Tier1 内核。
+`glb` / `gltf` / `obj` / `stl` / `ply` work out of the box; `step` / `stp` (CAD) goes through the
+Tier1 kernel.
 
-## ✨ 特性
+## Features
 
-- **一条 CLI，八个命令** — `inspect` / `simplify` / `segment` / `texture` / `convert` / `lod` / `optimize` / `doctor`
-- **Agent 优先的输出契约** — 语义化退出码（0/2/3/4/5/6/7/8）+ `meshify.report/v1` manifest，失败也产出结构化错误报告（`errors[]` + `failed_early`），降级必带警告码
-- **零配置即用（Tier0）** — Node ≥ 18.17 + WASM 几何内核（gltf-transform / meshoptimizer / earcut），无需 Python
-- **CAD 增强（Tier1）** — STEP/STP 经 Python（uv 管理）+ gmsh/OpenCASCADE 网格化，未装时明确报错并给安装指引
-- **安全默认** — 源文件永不改动；产物统一写入 `<输入名>.meshify/` 目录；覆盖必须显式 `--overwrite`
-- **质量可验证** — 自研 Hausdorff 采样与水密性计数断言，双内核一致性由测试套件保障
-- **before/after 预览** — `--preview-html` 自包含对比页，浏览器直接打开；skill 示例默认带上，省略即关闭
+- Eight commands: `inspect` / `simplify` / `segment` / `texture` / `convert` / `lod` / `optimize` / `doctor`
+- Failed runs still write a structured error report (`errors[]` + `failed_early`), not just an exit code
+- The Tier0 kernel is pure Node + WASM (gltf-transform / meshoptimizer / earcut) and runs on
+  Node ≥ 18.17; STEP/STP goes to the Tier1 Python kernel (uv-managed, gmsh / OpenCASCADE), with
+  install guidance returned on exit 5
+- Source files are read-only; artifacts go to `<input-name>.meshify/`; overwriting requires an
+  explicit `--overwrite`
+- Quality assertions are kernel-independent (custom Hausdorff sampling / boundary-edge
+  watertightness counting), with dedicated cross-kernel consistency tests
+- `--preview-html` generates a single-file before/after comparison page
 
-## 📦 安装
+## Install
 
-**从 GitHub 安装到 Agent 宿主**（推荐，无需克隆本仓库；[skills CLI](https://github.com/vercel-labs/skills)，Qoder 官方同款）：
+**From GitHub into an agent host** (recommended, no clone needed;
+[skills CLI](https://github.com/vercel-labs/skills)):
 
 ```bash
-# 自动检测本机已装的宿主，交互选择
+# auto-detect installed hosts, choose interactively
 npx skills add lxie-leo/meshify --skill meshify
 
-# 或显式指定宿主（-g 装到用户级全局目录）
+# or target a host explicitly (-g installs to the user-level global directory)
 npx skills add lxie-leo/meshify --skill meshify -a claude-code   # Claude Code
 npx skills add lxie-leo/meshify --skill meshify -a cursor        # Cursor
 npx skills add lxie-leo/meshify --skill meshify -a codex         # Codex
-npx skills add lxie-leo/meshify --skill meshify -a qoder-cn      # Qoder（国际版 -a qoder）
+npx skills add lxie-leo/meshify --skill meshify -a qoder-cn      # Qoder (international: -a qoder)
 npx skills add lxie-leo/meshify --skill meshify -a codebuddy     # CodeBuddy
-npx skills add lxie-leo/meshify --skill meshify -a universal     # Comate 等（装到 .agents/skills/，Comate 会自动加载）
+npx skills add lxie-leo/meshify --skill meshify -a universal     # Comate etc. (installs to .agents/skills/, auto-loaded by Comate)
 
-npx skills update                                                # 更新已装 skill
+npx skills update                                                # update installed skills
 ```
 
-Windows 下 symlink 需要开发者模式，未开启时加 `--copy` 改为复制安装。Cursor 也可走图形界面：Customize → Rules → Add Rule → Remote Rule (GitHub) → 填本仓库地址。
+On Windows, symlinks require Developer Mode; without it, add `--copy` to install by copying.
+Cursor also works through its UI: Customize → Rules → Add Rule → Remote Rule (GitHub) → point it
+at this repository.
 
-**Claude Code 原生插件市场**（同一路径也适用于 VSCode 扩展的 `/plugins` → Marketplaces）：
+**Claude Code native plugin marketplace** (the same path works in the VSCode extension's
+`/plugins` → Marketplaces):
 
 ```bash
 claude plugin marketplace add lxie-leo/meshify
 claude plugin install meshify@meshify-skills
 ```
 
-> 注意：以上远程安装装入的是 skill 文档（`SKILL.md` + `references/`）。CLI 本体目前需在本仓库内构建（见下），npm 发布后将支持 `npx meshify` 直接调用。
+> Note: the remote installs above deliver the skill documentation (`SKILL.md` + `references/`).
+> The CLI itself currently needs to be built from this repository (see below); `npx meshify`
+> becomes available once published to npm.
 
-**已克隆仓库**（安装器构建 CLI 并复制 skill 到探测到的宿主目录）：
+**From a clone** (the installer builds the CLI and copies the skill into detected host directories):
 
 ```bash
 # PowerShell
 powershell -ExecutionPolicy Bypass -File skills/meshify/scripts/install.ps1
-# POSIX sh（Git Bash / macOS / Linux）
+# POSIX sh (Git Bash / macOS / Linux)
 sh skills/meshify/scripts/install.sh
 ```
 
-安装器复制 `SKILL.md + references/` 到宿主 skills 目录、构建 CLI（如缺失）、运行 `meshify doctor` 自检。Skill 用法见 [skills/meshify/SKILL.md](skills/meshify/SKILL.md)。
+The installer copies `SKILL.md + references/` into host skills directories, builds the CLI if
+missing, and runs `meshify doctor` as a self-check. See [skills/meshify/SKILL.md](skills/meshify/SKILL.md)
+for skill usage.
 
-**从仓库使用**：
+**From the repository**:
 
 ```bash
 pnpm install && pnpm build
 pnpm meshify --help
 ```
 
-## 🚀 快速上手
+## Quick start
 
 ```bash
-# 第一步永远是结构分析：面数 / 子网格 / 材质 / 贴图 / 包围盒
+# Structure first: faces / submeshes / materials / textures / bounding box
 $ meshify inspect fixtures/glb/multimat.glb --json
 {
   "schema": "meshify.report/v1",
@@ -83,119 +102,140 @@ $ meshify inspect fixtures/glb/multimat.glb --json
   "exit_code": 0
 }
 
-# 减面到 30%（ratio = 保留率；逐子网格保材质，<200 面跳过并警告）
+# Simplify to 30% (ratio = fraction kept; per-submesh with materials preserved,
+# submeshes <200 faces skipped with a warning)
 meshify simplify model.glb --ratio 0.3
 
-# 精确目标面数（与 --ratio 互斥）
+# Or an exact target face count (mutually exclusive with --ratio)
 meshify simplify model.glb --target-faces 50000
 
-# 装配体拆件 / 平面切割（默认封口保水密）
+# Split an assembly / cut with a plane (capped watertight by default)
 meshify segment model.glb --mode connected
 meshify segment model.glb --mode plane --axis x --position 0
 
-# Web 交付一步到位：减面 + 纹理降采样 + meshopt/Draco 压缩
+# Web delivery: simplify + texture downscaling + meshopt/Draco compression
 meshify optimize model.glb --ratio 0.5 --texture-size 2048
 
-# STEP（CAD）→ GLB：自动路由到 Tier1，未装时给安装指引
+# STEP → GLB: routed to Tier1 automatically, with install guidance when missing
 meshify convert part.step --to glb
 ```
 
-通用选项：`-o <path>`、`--json`、`--overwrite`、`--tier auto|ts|py`、`--preview-html`、`--force`。全部示例与决策树见 [SKILL.md](skills/meshify/SKILL.md)。
+Global options: `-o <path>`, `--json`, `--overwrite`, `--tier auto|ts|py`, `--preview-html`,
+`--force`. Full examples and the decision tree live in [SKILL.md](skills/meshify/SKILL.md).
 
-## 🧭 命令一览
+## Commands
 
-| 命令 | 作用 | 关键语义 |
+| Command | Purpose | Key semantics |
 |---|---|---|
-| `inspect` | 只读分析（顶点/面数/子网格/材质/贴图/bbox） | manifest 即输出，无产物文件 |
-| `simplify` | QEM 减面（`--ratio` 保留率 \| `--target-faces` 目标面数，二选一） | 小网格 <200 面跳过 + `SMALL_MESH_SKIPPED` |
-| `segment` | 拆件：`--mode plane\|connected\|semantic` | 平面切割默认封口保水密 |
-| `texture` | 贴图 / UV 重投影（planar/cylindrical/spherical/box/uv） | 缺 UV 子网格自动补盒式 + 警告披露 |
-| `convert` | 格式互转（glb/gltf/obj/stl/ply；STEP 读入走 Tier1） | 材质/纹理跨格式尽量保留，丢失即披露；空场景产出合法空文件 + 警告 |
-| `lod` | 多级细节链（`--levels --ratio`） | level0 原样，逐级单调下降 |
-| `optimize` | 一站式轻量化（减面 + meshopt/draco + 贴图压缩/降采样） | 依赖不可用时降级并披露，不失败 |
-| `doctor` | 环境自检（Tier0/Tier1 就绪性、uv 安装指引） | `--json` 输出机器可读结果 |
+| `inspect` | Read-only analysis (vertices/faces/submeshes/materials/textures/bbox) | manifest is the output; no artifact file |
+| `simplify` | QEM decimation (`--ratio` fraction kept \| `--target-faces` target; one of the two) | Submeshes <200 faces skipped + `SMALL_MESH_SKIPPED` |
+| `segment` | Split: `--mode plane\|connected\|semantic` | Plane cuts capped watertight by default |
+| `texture` | Texturing / UV reprojection (planar/cylindrical/spherical/box/uv) | Submeshes missing UVs get box projection automatically + disclosure |
+| `convert` | Format interconversion (glb/gltf/obj/stl/ply; STEP input via Tier1) | Materials/textures preserved across formats where possible, losses disclosed; empty scenes produce a valid empty file + warning |
+| `lod` | Multi-level detail chain (`--levels --ratio`) | level0 kept as-is, strictly decreasing afterwards |
+| `optimize` | One-command lightweighting (simplify + meshopt/draco + texture compression/downscaling) | Degrades and discloses when dependencies are missing, never fails on them |
+| `doctor` | Environment check (Tier0/Tier1 readiness, uv install guidance) | `--json` for machine-readable output |
 
-## 🤖 Agent 契约
+## Agent contract
 
-**退出码**（Agent 按码决策）：
+Exit codes (agents decide by code):
 
-| 码 | 含义 |
+| Code | Meaning |
 |---|---|
-| 0 | 成功（可含非致命警告，读 `warnings[]`） |
-| 2 | 输入不可读（路径/权限/解析失败——截断、损坏、垃圾内容均归此码） |
-| 3 | 格式不支持（FBX 等先经 DCC 导出） |
-| 4 | 参数冲突 / 拒绝覆盖（覆盖需显式 `--overwrite`；输出 == 输入一律拒绝） |
-| 5 | Tier1 执行器不可用（stderr 附安装指引） |
-| 6 | 算法在当前输入上失败 |
-| 7 | 资源超限（>500 万面 / >500MB，`--force` 一次性放行） |
-| 8 | 内部错误 |
+| 0 | Success (may carry non-fatal warnings; read `warnings[]`) |
+| 2 | Input unreadable (path/permissions/parse failure — truncated, corrupt, and garbage content all land here) |
+| 3 | Format unsupported (export FBX etc. through a DCC first) |
+| 4 | Parameter conflict / overwrite refused (overwrites need an explicit `--overwrite`; output == input is always refused) |
+| 5 | Tier1 executor unavailable (stderr carries install guidance) |
+| 6 | Algorithm failed on this input |
+| 7 | Resource limit exceeded (>5M faces / >500 MB; `--force` for a one-shot pass) |
+| 8 | Internal error |
 
-用法错误统一收敛进 4。任何非 0 退出（含预加载失败 2/3/4/5）都会落一份最小失败 manifest：`errors[]` 带原因、`params.failed_early: true`、输入统计 0 值兜底，`--json` 时进 stdout——Agent 不必只靠退出码猜原因。
+Usage errors count as 4. Every non-zero exit (including pre-load failures 2/3/4/5) writes a
+minimal failure manifest: `errors[]` with the reason, `params.failed_early: true`, input stats
+zeroed as a fallback; `--json` sends it to stdout.
 
-**manifest**：每条命令在 `<输入名>.meshify/` 写 `<输入名>.<op>.report.json`，`--json` 时同一内容进 stdout。`metrics.face_reduction / byte_reduction` 看效果，`warnings[].code` 看降级（22 个警告码全表与字段级文档见 [report-schema.md](skills/meshify/references/report-schema.md) 与 [troubleshooting.md](skills/meshify/references/troubleshooting.md)；`face_reduction = 1 - out/in` 是纯数学口径，plane 封口/LOD 场景可为负）。
+Each command writes `<input-name>.<op>.report.json` under `<input-name>.meshify/`, identical to
+the `--json` stdout. Effects show up in `metrics.face_reduction / byte_reduction`; degradations in
+`warnings[].code` — field-level documentation and the full table of 22 warning codes live in
+[report-schema.md](skills/meshify/references/report-schema.md); troubleshooting in
+[troubleshooting.md](skills/meshify/references/troubleshooting.md).
 
-## ⚙️ 双层内核（Tiering）
+## Two kernels (tiering)
 
-| 层 | 技术 | 覆盖 | 启动条件 |
+| Tier | Stack | Covers | Requirements |
 |---|---|---|---|
-| **Tier0** `ts-wasm` | TypeScript + WASM（gltf-transform / meshoptimizer / earcut） | glb / gltf / obj / stl / ply 的全命令 | Node ≥ 18.17，零 Python 依赖 |
-| **Tier1** `python-uv` | Python（uv 管理；trimesh / gmsh / OpenCASCADE） | STEP/STP 等 CAD 网格化、跨内核交叉验证 | `uv sync`（`meshify doctor` 引导安装） |
+| **Tier0** `ts-wasm` | TypeScript + WASM (gltf-transform / meshoptimizer / earcut) | every command on glb / gltf / obj / stl / ply | Node ≥ 18.17, zero Python |
+| **Tier1** `python-uv` | Python (uv-managed; trimesh / gmsh / OpenCASCADE) | STEP/STP CAD meshing, cross-kernel cross-validation | `uv sync` (`meshify doctor` guides the install) |
 
-路由规则（`--tier auto|ts|py` 可干预）：STEP 输入强制 Tier1（未装报 exit 5，绝不降级）；动画/蒙皮输入强制 Tier0（保动画）；其余默认 Tier0，`--tier py` 走 Python 实现，manifest 结构完全一致。详见 [tiering.md](skills/meshify/references/tiering.md)。
+Routing rules: STEP input is forced onto Tier1 (exit 5 when not installed); animated / skinned
+input is forced onto Tier0 (animation preserved); everything else defaults to Tier0. `--tier
+auto|ts|py` overrides, and `--tier py` runs the Python implementation with a manifest identical to
+Tier0's. Details in [tiering.md](skills/meshify/references/tiering.md).
 
-## 📁 输出布局
+## Output layout
 
 ```
 model.glb
 model.meshify/
-  ├─ model.inspect.report.json      # 各命令报告（工具日志，可自动覆盖）
-  ├─ model.simplified.glb           # 单文件产物（覆盖需 --overwrite）
-  ├─ model.segment-plane.glb        # 分割合并产物（部件级 scene）
-  ├─ model.lod0.glb / lod1.glb ...  # LOD 链
-  └─ model.optimized.preview.html   # --preview-html 自包含对比页
+  ├─ model.inspect.report.json      # per-command reports (tool logs, auto-overwritable)
+  ├─ model.simplified.glb           # single-file artifact (needs --overwrite to replace)
+  ├─ model.segment-plane.glb        # merged segmentation artifact (part-level scene)
+  ├─ model.lod0.glb / lod1.glb ...  # LOD chain
+  └─ model.optimized.preview.html   # --preview-html self-contained comparison page
 ```
 
-## 🧪 开发
+## Development
 
 ```bash
-pnpm build                          # 构建（core / kernel-ts / cli）
-pnpm test                           # 全套（无 uv 时 Tier1 用例自动 skip）
+pnpm build                          # build core / kernel-ts / cli
+pnpm test                           # full suite (Tier1 cases auto-skip without uv)
 pnpm test -- tests/ts/quality.test.ts
-node fixtures/generate.mjs          # 重新生成黄金样本（STEP 部分需 uv）
-node fixtures/generate.mjs --big    # 追加 >500 万面大网格（配合 MESHIFY_TEST_BIG=1）
-MESHIFY_TEST_BIG=1 pnpm test        # 含资源防护（exit 7）用例
+node fixtures/generate.mjs          # regenerate golden samples (STEP part needs uv)
+node fixtures/generate.mjs --big    # append a >5M-face mesh (with MESHIFY_TEST_BIG=1)
+MESHIFY_TEST_BIG=1 pnpm test        # include resource-guard (exit 7) cases
 ```
 
-质量断言独立于内核实现（自研 Hausdorff 采样 / 边界边水密计数），双内核一致性测试要求同一输入在 Tier0/Tier1 上顶点、面数、材质、贴图、逐子网格统计与 bbox 完全一致。
+Quality assertions are kernel-independent (custom Hausdorff sampling / boundary-edge
+watertightness counting). Cross-kernel consistency tests require the same input to yield
+identical vertices, faces, materials, textures, per-submesh statistics, and bbox on Tier0 and
+Tier1.
 
-CI（[ci.yml](.github/workflows/ci.yml)）：win/mac/linux × Node 18/20/22 的 Tier0 矩阵 + 三平台 uv 全链路 Tier1 作业 + 手动触发的大网格防护作业。
+CI ([ci.yml](.github/workflows/ci.yml)): a Tier0 matrix of win/mac/linux × Node 18/20/22, a
+three-platform uv full-chain Tier1 job, and a manually triggered big-mesh guard job.
 
-> 注：根 `package.json` 的 `pnpm.overrides` 将 ndarray-pixels 的 sharp 钉在 0.33.5 —— sharp 0.35 系的 linux/macOS 预编译 libvips 缺 OpenJPEG，模块加载即崩（[sharp#4475](https://github.com/lovell/sharp/issues/4475)），升级前请先确认上游已修复。
+> Note: `pnpm.overrides` in the root `package.json` pins sharp for ndarray-pixels at 0.33.5 —
+> the prebuilt linux/macOS libvips of the sharp 0.35 line lacks OpenJPEG and crashes at module
+> load ([sharp#4475](https://github.com/lovell/sharp/issues/4475)). Confirm the upstream fix
+> before upgrading.
 
 <details>
-<summary>仓库结构</summary>
+<summary>Repository layout</summary>
 
 ```
-packages/core          契约层：zod schema / 警告码 / 退出码 / Tier 路由 / Python 桥
-packages/kernel-ts     Tier0 内核：io/inspect/simplify/segment/texture/convert/lod/optimize
-packages/cli           commander CLI：8 命令 + 输出管理 + before/after 预览 HTML
-packages-py/kernel-py  Tier1 内核：trimesh/gmsh 服务层（uv run python -m meshify_kernel payload.json）
-skills/meshify         Agent Skill 本体：SKILL.md + references/ + 安装器
-tests/ts               契约(zod×ajv) / 质量(Hausdorff·水密性) / 单命令 / 退出码 / 双内核一致性 / e2e
-fixtures               黄金样本生成器 + 提交的生成物（多材质/开口壳/STL/STEP/蒙皮动画/空几何）
+packages/core          contract layer: zod schema / warning codes / exit codes / tier routing / Python bridge
+packages/kernel-ts     Tier0 kernel: io/inspect/simplify/segment/texture/convert/lod/optimize
+packages/cli           commander CLI: 8 commands + output management + before/after preview HTML
+packages-py/kernel-py  Tier1 kernel: trimesh/gmsh service layer (uv run python -m meshify_kernel payload.json)
+skills/meshify         the agent skill: SKILL.md + references/ + installers
+tests/ts               contract (zod×ajv) / quality (Hausdorff, watertightness) / per-command / exit codes / cross-kernel consistency / e2e
+fixtures               golden sample generator + committed artifacts (multi-material / open shells / STL / STEP / skinned animation / empty geometry)
 ```
 
 </details>
 
-## 📚 文档
+## Documentation
 
-- [SKILL.md](skills/meshify/SKILL.md) — Skill 用法总览与决策树
-- [references/](skills/meshify/references/) — 各命令细节、报告 schema、Tier 仲裁、排障
-- [report-schema.md](skills/meshify/references/report-schema.md) — `meshify.report/v1` 字段级文档与 22 个警告码
+- [SKILL.md](skills/meshify/SKILL.md) — skill overview and decision tree
+- [references/](skills/meshify/references/) — per-command detail, report schema, tier routing, troubleshooting
+- [report-schema.md](skills/meshify/references/report-schema.md) — `meshify.report/v1` field-level docs and the 22 warning codes
+- Chinese translations: [README.zh-CN.md](README.zh-CN.md) / [SKILL.zh-CN.md](skills/meshify/SKILL.zh-CN.md) / [references/zh-CN/](skills/meshify/references/zh-CN/)
 
-## 🤝 贡献
+## Contributing
 
-欢迎 issue 与 PR。改动后请保证 `pnpm build && pnpm test` 全绿；涉及契约（退出码 / 警告码 / manifest schema）的变更请同步更新 [references/](skills/meshify/references/) 与测试。
+Issues and PRs are welcome. Keep `pnpm build && pnpm test` green; changes touching contracts
+(exit codes / warning codes / manifest schema) should update [references/](skills/meshify/references/)
+and the tests together.
 
 ## License
 

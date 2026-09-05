@@ -1,112 +1,123 @@
 ---
 name: meshify
-description: 三维模型轻量化与优化工具链。输入 glb/gltf/obj/stl/ply（Tier0 即用）/ step/stp（Tier1），输出减面、分割、贴图、格式转换、LOD、Web 交付优化产物 + meshify.report/v1 结构化报告。任何「模型太大/面数太高/CAD 文件要转 GLB/要拆件/要压纹理」的任务先用本工具。
+description: 3D model optimization toolkit. Mesh simplification (QEM decimation), splitting models into parts, UV projection and texturing, format conversion, LOD chains, and one-command web delivery compression. Reads glb/gltf/obj/stl/ply out of the box, step/stp CAD via the Tier1 kernel. Every command writes a meshify.report/v1 JSON manifest and exits with a semantic exit code. Use it whenever a model is too large, the face count is too high, a CAD file needs to become GLB, parts must be separated, or textures need shrinking. 中文任务同样触发：减面/拆件/贴图/格式转换/CAD 转 GLB。
 ---
 
-# meshify —— 3D 模型轻量化 Agent Skill
+# meshify — 3D mesh optimization agent skill
 
-## 能力定位
+> English | [简体中文](SKILL.zh-CN.md)
 
-把三维模型处理成 Web/AR/移动端可交付的形态：减面、拆件、贴图、转格式、LOD、一键压缩。
-所有命令输出 `meshify.report/v1` manifest（JSON），按语义退出码报告结果——**依据报告决策，而非猜测**。
+## Scope
 
-- **零配置即用**：Node ≥ 18.17 即可跑（Tier0：WASM 几何内核）
-- **CAD 增强**：STEP/STP 需要 Tier1（Python/uv + gmsh），未装时明确报 exit 5 并给安装指引，绝不静默降级
-- **默认不覆盖**：产物写 `<输入目录>/<输入名>.meshify/`，重复执行幂等安全；覆盖必须显式 `--overwrite`
+Prepares 3D models for delivery on the web, AR, and mobile: simplification, part splitting,
+texturing, format conversion, LOD chains, one-command compression. Every command writes a
+`meshify.report/v1` manifest (JSON) and reports results through semantic exit codes.
 
-## 支持矩阵（速查）
+**Always report results to the user in the user's own language.** This document is English;
+that choice only affects what you read, not what you say to the user.
 
-| 命令 | 作用 | Tier0 | Tier1 | 关键参数 |
+- **Zero-install baseline**: runs on Node ≥ 18.17 (Tier0: WASM geometry kernel)
+- **CAD support**: STEP/STP needs Tier1 (Python/uv + gmsh); when missing, exit 5 with install instructions
+- **Never overwrites by default**: artifacts go to `<input-dir>/<input-name>.meshify/`, re-running is
+  idempotent; overwriting requires an explicit `--overwrite`
+
+## Support matrix (quick reference)
+
+| Command | Purpose | Tier0 | Tier1 | Key parameters |
 |---|---|---|---|---|
-| inspect | 结构分析（面数/材质/贴图/包围盒） | ✅ | ✅（STEP） | `--json` |
-| simplify | QEM 减面（逐子网格保材质） | ✅ | ✅ | `--ratio 0.5`、`--target-faces`、`--min-faces` |
-| segment | 拆件：connected/plane/semantic | ✅ | ✅ | `--mode`、`--axis x --position 0.5`、`--cap` |
-| texture | 五投影 UV + 贴图绑定 | ✅ | ✅ | `--map box`、`--image`、`--metallic/--roughness` |
-| convert | glb/gltf/obj/stl/ply 互转 | ✅ | ✅（STEP 读入） | `--to glb`、`--up-axis x\|auto`（STEP 躺着建模时扶正/自动判定） |
-| lod | 多级 LOD链 | ✅ | ✅ | `--levels 3 --ratio 0.5` |
-| optimize | Web 交付一键优化（meshopt+WebP） | ✅ | ⚠️ 无压缩基线 | `--ratio`、`--texture-size` |
-| doctor | 环境自检 + 安装引导 | ✅ | 检测 | `--json`、`--install-uv` |
+| inspect | Structure analysis (faces/materials/textures/bbox) | ✅ | ✅ (STEP) | `--json` |
+| simplify | QEM decimation (per-submesh, materials kept) | ✅ | ✅ | `--ratio 0.5`, `--target-faces`, `--min-faces` |
+| segment | Split: connected/plane/semantic | ✅ | ✅ | `--mode`, `--axis x --position 0.5`, `--cap` |
+| texture | Five UV projections + texture binding | ✅ | ✅ | `--map box`, `--image`, `--metallic/--roughness` |
+| convert | glb/gltf/obj/stl/ply interconversion | ✅ | ✅ (reads STEP) | `--to glb`, `--up-axis x\|auto` (upright models authored lying down / auto-detect) |
+| lod | Multi-level LOD chain | ✅ | ✅ | `--levels 3 --ratio 0.5` |
+| optimize | One-command web delivery (meshopt+WebP) | ✅ | ⚠️ uncompressed baseline | `--ratio`, `--texture-size` |
+| doctor | Environment check + install guidance | ✅ | detects | `--json`, `--install-uv` |
 
-输入格式：`glb gltf obj stl ply`（Tier0 直接读）/ `step stp`（仅 Tier1）。FBX 等不支持（exit 3）。
+Input formats: `glb gltf obj stl ply` (Tier0 reads directly) / `step stp` (Tier1 only).
+FBX and others are not supported (exit 3).
 
-## 决策树（按序执行）
+## Decision tree (in order)
 
 ```
-拿到模型
-  ├─ 不了解结构？ → meshify inspect model.glb --json   # 面数/子网格/材质/贴图/动画 全部拿到
-  ├─ 是 STEP？ → meshify doctor 先确认 Tier1；未装按指引装（见 references/cad-step.md）
-  ├─ 太大/面数高？
-  │    ├─ 单体模型 → meshify simplify --ratio 0.5
-  │    ├─ 装配体要拆 → meshify segment --mode connected
-  │    └─ 要一刀两半 → meshify segment --mode plane --axis x
-  ├─ 要上纹理 → meshify texture --map box --image tex.png
-  ├─ 要换格式 → meshify convert --to stl|obj|ply|gltf
-  ├─ 要分级加载 → meshify lod --levels 3 --ratio 0.5
-  └─ 一步到位 Web 交付 → meshify optimize --ratio 0.5 --texture-size 2048
-每次命令后：读 report.json（或 --json stdout）核对 warnings 与削减指标
+Got a model
+  ├─ Don't know its structure? → meshify inspect model.glb --json   # faces/submeshes/materials/textures/animations
+  ├─ It's a STEP? → meshify doctor first to confirm Tier1; install if needed (references/cad-step.md)
+  ├─ Too large / too many faces?
+  │    ├─ Single object → meshify simplify --ratio 0.5
+  │    ├─ Assembly to split → meshify segment --mode connected
+  │    └─ Cut in half → meshify segment --mode plane --axis x
+  ├─ Needs textures → meshify texture --map box --image tex.png
+  ├─ Needs another format → meshify convert --to stl|obj|ply|gltf
+  ├─ Needs progressive loading → meshify lod --levels 3 --ratio 0.5
+  └─ Web delivery in one step → meshify optimize --ratio 0.5 --texture-size 2048
+After each command: read report.json (or --json stdout) and check warnings and reduction metrics
 ```
 
-**产物命令默认带 `--preview-html`**（simplify/segment/texture/convert/lod/optimize）：生成
-before/after 对比页，肉眼核对效果最快。关 = 省略该 flag——用户明确说不要预览、或批量/
-无人值守跑批时省略（HTML 内嵌 base64 模型，体积 ≈ 产物 1.33 倍；three.js 走 CDN 需联网）。
+**Artifact commands default to `--preview-html`** (simplify/segment/texture/convert/lod/optimize):
+it generates a before/after comparison page, the fastest way to verify the result by eye. Omit the
+flag when the user explicitly declines a preview, or for batch/unattended runs (the HTML embeds the
+model as base64 at roughly 1.33x the artifact size; three.js loads from a CDN and needs network).
 
-**semantic 的边界**：`--mode semantic` 认的是「朝向+位置」聚类，不是零件语义。装配体拆件用 connected；
-想按外观分区（平面/曲面/不同朝向）才用 semantic。
+**What semantic mode is not**: `--mode semantic` clusters by orientation + position; it does not
+recognize parts. Use connected to split an assembly; use semantic only to partition by appearance
+(flat/curved/differently oriented regions).
 
-## 命令示例
+## Command examples
 
 ```bash
-# 结构分析（Agent 第一步；--json 拿完整 manifest）
+# Structure analysis (the agent's first step; --json for the full manifest)
 meshify inspect model.glb --json
 
-# 减面到 30%（逐子网格保材质；<200 面子网格跳过并警告）
+# Simplify to 30% (per-submesh, materials kept; submeshes <200 faces skipped with a warning)
 meshify simplify model.glb --ratio 0.3 --preview-html
 
-# 精确目标面数 + 误差上限
+# Exact target face count + error bound
 meshify simplify model.glb --target-faces 50000 --error 0.005 --preview-html
 
-# 连通域拆件（装配体首选；丢弃 <50 面碎件）
+# Connected-component split (first choice for assemblies; drops fragments <50 faces)
 meshify segment model.glb --mode connected --min-faces 50 --preview-html
 
-# 平面切割：滑块语义（-1..1 映射包围盒）或原生坐标二选一
+# Plane cut: slider semantics (-1..1 mapped across the bbox) or native coordinates
 meshify segment model.glb --mode plane --axis x --position 0 --preview-html
 meshify segment model.glb --mode plane --origin "0,10,0" --normal "0,1,0"
 
-# 贴图（盒式投影，无 UV 时自动生成并警告披露）
+# Texture (box projection; generates UVs when missing and discloses it)
 meshify texture model.glb --map box --image diffuse.png --metallic 0.1 --preview-html
 
-# 格式转换（输出 STL 给切片软件）
+# Format conversion (STL for slicers)
 meshify convert model.glb --to stl --preview-html
 
-# 三级 LOD（100%/50%/25%）
+# Three LOD levels (100%/50%/25%)
 meshify lod model.glb --levels 3 --ratio 0.5 --preview-html
 
-# Web 交付：减面 + 纹理 2048 上限 + meshopt 压缩
+# Web delivery: simplify + textures capped at 2048 + meshopt compression
 meshify optimize model.glb --ratio 0.5 --texture-size 2048 --preview-html
 
-# STEP（CAD）→ GLB：需要 Tier1
+# STEP (CAD) → GLB: needs Tier1
 meshify convert part.step --to glb
 
-# STEP 里躺着建模的部件（真实朝上轴非 CAD 惯例 Z）扶正后再转
+# A part authored lying down (real up axis is not the CAD-default Z): upright it while converting
 meshify convert part.step --to glb --up-axis auto --preview-html
 
-# 环境自检（装 Tier1 前后都跑一次）
+# Environment check (run before and after installing Tier1)
 meshify doctor
 ```
 
-通用选项（全部命令）：`-o <path>` 显式输出路径、`--json` manifest 到 stdout、`--overwrite`、
-`--tier auto|ts|py`、`--force` 超限一次性处理。`--preview-html` 见决策树后的默认策略——
-产物命令默认带上（省略即关闭）。
+Global options (all commands): `-o <path>` explicit output path, `--json` manifest to stdout,
+`--overwrite`, `--tier auto|ts|py`, `--force` to process an oversize input once. `--preview-html`
+follows the default policy above: artifact commands include it unless the flag is omitted.
 
-## 报告解读（meshify.report/v1）
+## Reading the report (meshify.report/v1)
 
-每条命令在 `<输入名>.meshify/<输入名>.<op>.report.json` 写 manifest（报告是工具自有日志，可自动覆盖；
-模型产物才受 `--overwrite` 约束）。`--json` 时同一内容进 stdout。
+Each command writes a manifest at `<input-name>.meshify/<input-name>.<op>.report.json` (reports are
+the tool's own logs and may be overwritten automatically; only model artifacts are governed by
+`--overwrite`). With `--json` the same content goes to stdout.
 
 ```jsonc
 {
   "schema": "meshify.report/v1",
-  "tool": { "name": "meshify", "version": "0.1.0", "tier": "ts-wasm" },  // 或 python-uv
+  "tool": { "name": "meshify", "version": "0.1.0", "tier": "ts-wasm" },  // or python-uv
   "command": "simplify",
   "input":  { "path": "...", "format": "glb", "vertices": 54, "faces": 32,
               "meshes": [ { "name": "boxA", "material": "red", "has_uv": true, ... } ],
@@ -121,53 +132,60 @@ meshify doctor
 }
 ```
 
-**读法**：`metrics.face_reduction/byte_reduction` 看效果；`warnings[].code` 看降级（每条都是显式披露，
-不是失败）；`errors` 非空即失败。警告码全表见 references/troubleshooting.md。
+**How to read it**: `metrics.face_reduction/byte_reduction` shows the effect; `warnings[].code`
+shows degradations (not failures); non-empty `errors` means failure. Full warning-code table in
+references/troubleshooting.md.
 
-**失败路径同样产出 manifest**：非 0 退出码（输入不可读/参数冲突/空场景等早失败）时也会落
-最小 manifest（`errors[]` 带原因、`params.failed_early: true`、输入统计 0 值兜底），
-`--json` 下 stdout 契约不变——统一「先解析 stdout manifest，失败看 errors + exit_code」，
-不必拿退出码猜。字段细节见 references/report-schema.md。
+**Failed runs also produce a manifest**: non-zero exits (unreadable input, parameter conflicts,
+empty scene, and other early failures) still write a minimal manifest (`errors[]` with the reason,
+`params.failed_early: true`, input stats zeroed as a fallback), and the `--json` stdout contract is
+unchanged. Always "parse the stdout manifest first; on failure read errors + exit_code".
+Field-level detail in references/report-schema.md.
 
-## 退出码契约（Agent 按码决策）
+## Exit codes (decide by code)
 
-| 码 | 含义 | 下一步 |
+| Code | Meaning | Next step |
 |---|---|---|
-| 0 | 成功 | 读 manifest |
-| 2 | 输入不可读 | 检查路径/权限 |
-| 3 | 格式不支持 | 转 glb 后重试（FBX 等先经 DCC 导出） |
-| 4 | 参数冲突 / 拒绝覆盖 | 看报错信息改参数；确认覆盖加 `--overwrite` |
-| 5 | Tier1 不可用 | `meshify doctor --install-uv` 后 `uv sync`（见 cad-step.md） |
-| 6 | 算法失败 | 调参数（平面位置/聚类数），或先 segment 拆件 |
-| 7 | 资源超限/部分成功 | `--force` 或先拆件分批 |
-| 8 | 内部错误 | 附 report.json 反馈 |
+| 0 | Success | Read the manifest |
+| 2 | Input unreadable | Check path/permissions |
+| 3 | Format unsupported | Convert to glb and retry (export FBX etc. through a DCC first) |
+| 4 | Parameter conflict / overwrite refused | Fix parameters per the message; add `--overwrite` to confirm |
+| 5 | Tier1 unavailable | `meshify doctor --install-uv`, then `uv sync` (cad-step.md) |
+| 6 | Algorithm failure | Adjust parameters (plane position/cluster count), or segment first |
+| 7 | Resource limit / partial success | `--force`, or split into batches |
+| 8 | Internal error | Attach report.json to the bug report |
 
-## Tier 仲裁（何时走 Python）
+## Tier routing (when Python runs)
 
-1. 输入含**动画/蒙皮/morph** → 强制 Tier0（trimesh 管线会丢动画），写 `SKIN_ANIMATION_PRESERVED`
-2. 输入是 **STEP** → 强制 Tier1；未装 → exit 5 + 安装指引（无 TS 回退，不降级）
-3. 其余默认 Tier0；`--tier py` 显式要求时走 Tier1，Tier1 不可用则 exit 5
-4. `optimize` 的 meshopt/draco/WebP 压缩是 Tier0 专属——`--tier py` 下输出未压缩基线并写 `TIER_DOWNGRADED` 披露
+1. Input contains **animation/skinning/morphs** → forced Tier0 (the trimesh pipeline would drop
+   animation), writes `SKIN_ANIMATION_PRESERVED`
+2. Input is **STEP** → forced Tier1; when not installed → exit 5 + install instructions
+   (no TS fallback; this is a capability boundary, not a malfunction)
+3. Everything else defaults to Tier0; `--tier py` explicitly requests Tier1, exit 5 if unavailable
+4. meshopt/draco/WebP compression in `optimize` is Tier0-only — under `--tier py` the output is an
+   uncompressed baseline with a `TIER_DOWNGRADED` disclosure
 
-详见 references/tiering.md。
+Details in references/tiering.md.
 
-## 输出布局
+## Output layout
 
 ```
 model.glb
 model.meshify/
-  ├─ model.inspect.report.json      # 各命令报告
-  ├─ model.simplified.glb           # 单文件产物
-  ├─ model.segment-plane.glb        # 分割合并产物（部件级 scene）
-  ├─ model.segment-plane/part_000.glb ...   # Tier1 多部件目录
-  ├─ model.lod0.glb / lod1.glb ...  # LOD 链（Tier0）
-  └─ *.preview.html                 # --preview-html 对比页（与产物同名，自包含单文件，可直接开浏览器）
+  ├─ model.inspect.report.json      # per-command reports
+  ├─ model.simplified.glb           # single-file artifact
+  ├─ model.segment-plane.glb        # merged segmentation artifact (part-level scene)
+  ├─ model.segment-plane/part_000.glb ...   # Tier1 multi-part directory
+  ├─ model.lod0.glb / lod1.glb ...  # LOD chain (Tier0)
+  └─ *.preview.html                 # --preview-html comparison page (self-contained single file, opens directly in a browser)
 ```
 
-## 排障指针
+## Troubleshooting pointers
 
-- 环境问题（WASM 加载失败 / uv 未装 / 磁盘不足）→ `meshify doctor`，或 references/troubleshooting.md
-- STEP 转换失败/精度调整 → references/cad-step.md
-- 各命令参数细节 → references/{simplify,segment,texture,convert,optimize}.md
-- 双内核差异与一致性 → references/tiering.md；宿主兼容 → references/support-matrix.md
-- manifest 字段级文档 → references/report-schema.md
+- Environment problems (WASM load failure / uv missing / low disk) → `meshify doctor`, or references/troubleshooting.md
+- STEP conversion failures / precision tuning → references/cad-step.md
+- Per-command parameter detail → references/{simplify,segment,texture,convert,optimize}.md
+- Dual-kernel differences and consistency → references/tiering.md; host compatibility → references/support-matrix.md
+- Manifest field-level documentation → references/report-schema.md
+- Chinese translations (for human readers) → SKILL.zh-CN.md + references/zh-CN/; these English
+  files are the operative copy for the agent
