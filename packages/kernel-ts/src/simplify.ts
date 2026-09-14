@@ -70,6 +70,10 @@ export async function simplifyDocument(
 	let facesAfter = 0;
 	let maxError = 0;
 	let partial = false;
+	// UV 接缝地板：带 UV 子网格请求目标未达成（实际面数 > 目标 × 1.2）的名单。
+	// 机理：UV 岛接缝处同位顶点被切开（位同一焊接不并合），meshopt 视其为锁定边界，
+	// 无法跨接缝坍缩 → 深度减面存在结构性下限，--no-keep-border/--merge 均绕不开。
+	const uvLimited: string[] = [];
 
 	for (const info of infos) {
 		const before = info.indices.length / 3;
@@ -108,11 +112,24 @@ export async function simplifyDocument(
 				// 简化未生效（拓扑受限），保留原样
 				facesAfter += before;
 			}
+			// 无论部分达成还是完全未动，只要带 UV 且远超请求目标即记入接缝地板名单
+			if (info.localUvs && perMesh[perMesh.length - 1].after > Math.max(1, Math.floor(target * 1.2))) {
+				uvLimited.push(info.name);
+			}
 		} catch (err) {
 			partial = true;
 			errors.push(`${info.name}: simplification failed (${err instanceof Error ? err.message : String(err)}); kept as-is`);
 			facesAfter += before;
 		}
+	}
+
+	if (uvLimited.length > 0) {
+		warnings.push(
+			warn(
+				'UV_SEAM_DECIMATION_LIMITED',
+				`decimation stopped above the requested target on UV-bearing submesh(es) ${uvLimited.join(', ')}: UV island seams act as locked borders that block further collapse (structural floor, not an error-bound stop); simplify before texturing to reach lower face counts`,
+			),
+		);
 	}
 
 	if (partial) {

@@ -6,6 +6,8 @@
 export const WARNING_CODES = [
 	/** 坑 12：子网格面数 < min-faces，跳过简化原样保留 */
 	'SMALL_MESH_SKIPPED',
+	/** 带 UV 子网格深度减面被 UV 岛接缝顶住（接缝顶点无法坍缩），实际面数高于请求目标 */
+	'UV_SEAM_DECIMATION_LIMITED',
 	/** 无 UV 源可重映射，材质降级为仅 baseColor 标量（贴图被剥离） */
 	'MATERIAL_DEGRADED_TO_BASE_COLOR',
 	/** 贴图按最近邻/子集保留近似处理，极端形变区可能拉伸 */
