@@ -272,4 +272,35 @@ describe('Agent 工作流 E2E', () => {
 		expect(m.tool?.name).toBe('meshify');
 		expect(typeof m.time).toBe('string');
 	}, 60_000);
+
+	it('simplify params 互斥回显：--target-faces 与 --ratio 各自只回显生效者', () => {
+		const dir = freshDir('e2e-params-exclusive');
+		const copy = path.join(dir, 'dense.glb');
+		fs.copyFileSync(FIX('glb/dense.glb'), copy);
+
+		const tf = cli(['simplify', copy, '--target-faces', '1000', '--json']);
+		expect(tf.code).toBe(0);
+		expect(tf.manifest!.params.target_faces).toBe(1000);
+		expect(tf.manifest!.params.ratio).toBeUndefined();
+
+		const rt = cli(['simplify', copy, '--ratio', '0.5', '--json', '--overwrite']);
+		expect(rt.code).toBe(0);
+		expect(rt.manifest!.params.ratio).toBe(0.5);
+		expect(rt.manifest!.params.target_faces).toBeUndefined();
+	}, 120_000);
+
+	it('lod output 口径：bytes/path 对齐 lod0 单文件，全链总和在 metrics.bytes_total', () => {
+		const dir = freshDir('e2e-lod-bytes');
+		const copy = path.join(dir, 'dense.glb');
+		fs.copyFileSync(FIX('glb/dense.glb'), copy);
+		const r = cli(['lod', copy, '--levels', '3', '--ratio', '0.5', '--json']);
+		expect(r.code).toBe(0);
+		const m = r.manifest!;
+		const lods = m.output.files.filter((f: any) => f.role === 'lod');
+		expect(m.output.path).toBe(lods[0].path);
+		expect(m.output.bytes).toBe(lods[0].bytes);
+		expect(m.metrics.bytes_total).toBe(lods.reduce((s: number, f: any) => s + f.bytes, 0));
+		// 顶层口径与磁盘一致；bytes_total 覆盖逐级 lod 文件（preview 未生成）
+		expect(fs.statSync(m.output.path).size).toBe(m.output.bytes);
+	}, 120_000);
 });

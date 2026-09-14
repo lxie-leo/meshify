@@ -11,6 +11,7 @@ import {
 	objToDocument,
 	stlToDocument,
 	assertResourceLimits,
+	simplifyDocument,
 } from '@meshify/kernel-ts';
 import { FIX } from './helpers';
 
@@ -116,5 +117,31 @@ describe('convert 内核（非 glTF → GLB 往返）', () => {
 		const r = await inspectDocument(doc);
 		expect(r.faces).toBe(12);
 		expect(r.materials).toBe(0);
+	});
+});
+
+describe('simplify 内核（UV 接缝地板披露）', () => {
+	it('multimat.glb 深度减面被 UV 岛接缝顶住 → UV_SEAM_DECIMATION_LIMITED', async () => {
+		const r = await simplifyDocument(await readDocument(FIX('glb/multimat.glb')), {
+			ratio: 0.01,
+			error: 1,
+			minFaces: 1,
+		});
+		// 12 面小网格被接缝顶到零坍缩（after === before）也是合法地板场景——
+		// 警告契约测「披露」，不测减了多少
+		expect(r.facesAfter).toBeLessThanOrEqual(r.facesBefore);
+		const w = r.warnings.find((x) => x.code === 'UV_SEAM_DECIMATION_LIMITED');
+		expect(w).toBeTruthy();
+		// 只点名带 UV 的子网格，无 UV 的 plain_c 不得入列
+		expect(w!.message).toContain('textured_a');
+		expect(w!.message).toContain('textured_b');
+		expect(w!.message).not.toContain('plain_c');
+	});
+
+	it('无 UV 输入同样激进减面：不误报接缝地板', async () => {
+		// STL 立方体无 UV 属性（GLB fixtures 全带 UV，不可用作负例）
+		const doc = stlToDocument(fs.readFileSync(FIX('stl/cube.stl')), 'cube');
+		const r = await simplifyDocument(doc, { ratio: 0.01, error: 1, minFaces: 1 });
+		expect(r.warnings.some((x) => x.code === 'UV_SEAM_DECIMATION_LIMITED')).toBe(false);
 	});
 });
