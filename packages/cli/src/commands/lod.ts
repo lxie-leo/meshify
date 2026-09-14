@@ -94,6 +94,18 @@ export function registerLod(program: Command): void {
 		const totalBytes = lodSummaries.reduce((s, l) => s + l.bytes, 0);
 		const stats = await documentStats(result.levels[0].document);
 
+		// 口径：output 顶层描述 output.path（lod0）单文件——bytes/vertices/faces 均取 lod0；
+		// 整链交付总体积在 metrics.bytes_total（逐级权威数据在 files[] 与 lod_levels[]）
+		const output = {
+			path: main.path,
+			format: 'glb',
+			bytes: main.bytes,
+			vertices: stats.vertices,
+			faces: stats.faces,
+			files,
+		};
+		const metrics = { lod_levels: lodSummaries, bytes_total: totalBytes };
+
 		if (opts.previewHtml && beforeBytes) {
 			progress('Generating preview page…');
 			const htmlPath = om.claim(om.previewPath(main.path));
@@ -103,16 +115,9 @@ export function registerLod(program: Command): void {
 				report: draftOf({
 					command: 'lod',
 					input: loaded.inputInfo,
-					output: {
-						path: main.path,
-						format: 'glb',
-						bytes: totalBytes,
-						vertices: stats.vertices,
-						faces: stats.faces,
-						files,
-					},
+					output,
 					params,
-					metrics: { lod_levels: lodSummaries },
+					metrics,
 					warnings,
 					tier: route.tier,
 					durationMs: Date.now() - startedAt,
@@ -127,16 +132,9 @@ export function registerLod(program: Command): void {
 			{
 				command: 'lod',
 				input: loaded.inputInfo,
-				output: {
-					path: main.path,
-					format: 'glb',
-					bytes: totalBytes,
-					vertices: stats.vertices,
-					faces: stats.faces,
-					files,
-				},
+				output,
 				params,
-				metrics: { lod_levels: lodSummaries },
+				metrics,
 				warnings,
 				tier: route.tier,
 				durationMs: Date.now() - startedAt,

@@ -254,19 +254,22 @@ def _cmd_segment(input_path, params, output_path, output_dir, overwrite):
         {"index": p["index"], "path": p["path"], "vertices": p["vertices"], "faces": p["faces"]}
         for p in result["parts"]
     ]
-    total_bytes = sum(f["bytes"] for f in files)
+    # 口径：output 顶层描述 output.path（part_000）单文件，全部部件总体积在 metrics.bytes_total
+    first = result["parts"][0]
+    first_file = files[0]
     output = {
-        "path": result["parts"][0]["path"],
+        "path": first["path"],
         "format": "glb",
-        "bytes": total_bytes,
-        "vertices": result["vertices"],
-        "faces": result["faces"],
+        "bytes": first_file["bytes"],
+        "vertices": first["vertices"],
+        "faces": first["faces"],
         "files": files,
     }
     return {
         "output": output,
         "warnings": result.get("warnings", []),
         "parts": parts_metrics,
+        "bytes_total": sum(f["bytes"] for f in files),
         "tier_note": result.get("tier_note"),
     }
 
@@ -323,18 +326,21 @@ def _cmd_lod(input_path, params, output_path, output_dir, overwrite):
         overwrite=overwrite,
     )
     files = [_file_info(p["path"], "lod") for p in result["parts"]]
+    # 口径：output 顶层描述 output.path（part_000/lod0）单文件，整链总体积在 metrics.bytes_total
+    first = result["lod_levels"][0]
     output = {
-        "path": result["lod_levels"][0]["path"],
+        "path": first["path"],
         "format": "glb",
-        "bytes": sum(f["bytes"] for f in files),
-        "vertices": result["vertices"],
-        "faces": result["faces"],
+        "bytes": first["bytes"],
+        "vertices": first["vertices"],
+        "faces": first["faces"],
         "files": files,
     }
     return {
         "output": output,
         "warnings": result.get("warnings", []),
         "lod_levels": result["lod_levels"],
+        "bytes_total": sum(f["bytes"] for f in files),
         "tier_note": result.get("tier_note"),
     }
 

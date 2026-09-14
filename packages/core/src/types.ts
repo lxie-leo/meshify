@@ -73,6 +73,8 @@ export interface Metrics {
 	ratio_actual?: number;
 	/** 归一化几何偏差上界（meshopt error 语义） */
 	max_error_normalized?: number;
+	/** 多部件/lod 命令全部产物文件字节总和（output.bytes 只覆盖 output.path 单文件） */
+	bytes_total?: number;
 	duration_ms: number;
 	derives_from?: string;
 	parts?: PartSummary[];
