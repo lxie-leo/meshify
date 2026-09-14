@@ -58,8 +58,9 @@ export function registerSimplify(program: Command): void {
 			throw new MeshifyError(EXIT_CODES.EXIT_PARAM_CONFLICT, '--ratio and --target-faces are mutually exclusive; pick one');
 		}
 
+		// params 回显遵循互斥契约：--ratio 与 --target-faces 只回显实际生效的那个
+		// （否则默认 ratio 0.5 与 target_faces 并存，manifest 看起来像违规组合）
 		const params: Record<string, unknown> = {
-			ratio: parseNumber(opts.ratio ?? '0.5', 'ratio', { min: 1e-6, max: 1 }),
 			error: parseNumber(opts.error, 'error', { min: 1e-6, max: 1 }),
 			keep_border: opts.keepBorder !== false,
 			per_mesh: opts.merge !== true,
@@ -68,6 +69,8 @@ export function registerSimplify(program: Command): void {
 		};
 		if (opts.targetFaces !== undefined) {
 			params.target_faces = parseInteger(opts.targetFaces, 'target-faces', { min: 1 });
+		} else {
+			params.ratio = parseNumber(opts.ratio ?? '0.5', 'ratio', { min: 1e-6, max: 1 });
 		}
 
 		// STEP 或显式 --tier py → Tier1（pyfqmr）；否则 Tier0
@@ -83,7 +86,7 @@ export function registerSimplify(program: Command): void {
 
 		progress('Simplifying (QEM)…');
 		const result = await simplifyDocument(loaded.doc, {
-			ratio: params.ratio as number,
+			ratio: params.ratio as number | undefined,
 			targetFaces: params.target_faces as number | undefined,
 			error: params.error as number,
 			keepBorder: params.keep_border as boolean,
