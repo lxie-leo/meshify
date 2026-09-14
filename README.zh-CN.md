@@ -133,7 +133,7 @@ meshify convert part.step --to glb
 
 用法错误统一算 4。任何非 0 退出（含预加载失败的 2/3/4/5）都会写一份最小失败 manifest：`errors[]` 带原因、`params.failed_early: true`、输入统计以 0 值兜底，`--json` 时进 stdout。
 
-每条命令在 `<输入名>.meshify/` 下写 `<输入名>.<op>.report.json`，内容与 `--json` 的 stdout 一致。效果看 `metrics.face_reduction / byte_reduction`，降级看 `warnings[].code`——字段级文档与 22 个警告码全表见 [report-schema.md](skills/meshify/references/report-schema.md)，排障见 [troubleshooting.md](skills/meshify/references/troubleshooting.md)。
+每条命令在 `<输入名>.meshify/` 下写 `<输入名>.<op>.report.json`，内容与 `--json` 的 stdout 一致。效果看 `metrics.face_reduction / byte_reduction`，降级看 `warnings[].code`——字段级文档与 23 个警告码全表见 [report-schema.md](skills/meshify/references/report-schema.md)，排障见 [troubleshooting.md](skills/meshify/references/troubleshooting.md)。
 
 ## ⚙️ 双层内核（Tiering）
 
@@ -192,7 +192,7 @@ fixtures               黄金样本生成器 + 提交的生成物（多材质/�
 
 - [SKILL.md](skills/meshify/SKILL.md) — Skill 用法总览与决策树
 - [references/](skills/meshify/references/) — 各命令细节、报告 schema、Tier 仲裁、排障
-- [report-schema.md](skills/meshify/references/report-schema.md) — `meshify.report/v1` 字段级文档与 22 个警告码
+- [report-schema.md](skills/meshify/references/report-schema.md) — `meshify.report/v1` 字段级文档与 23 个警告码
 
 ## 🤝 贡献
 

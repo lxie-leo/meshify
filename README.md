@@ -157,7 +157,7 @@ zeroed as a fallback; `--json` sends it to stdout.
 
 Each command writes `<input-name>.<op>.report.json` under `<input-name>.meshify/`, identical to
 the `--json` stdout. Effects show up in `metrics.face_reduction / byte_reduction`; degradations in
-`warnings[].code` — field-level documentation and the full table of 22 warning codes live in
+`warnings[].code` — field-level documentation and the full table of 23 warning codes live in
 [report-schema.md](skills/meshify/references/report-schema.md); troubleshooting in
 [troubleshooting.md](skills/meshify/references/troubleshooting.md).
 
@@ -228,7 +228,7 @@ fixtures               golden sample generator + committed artifacts (multi-mate
 
 - [SKILL.md](skills/meshify/SKILL.md) — skill overview and decision tree
 - [references/](skills/meshify/references/) — per-command detail, report schema, tier routing, troubleshooting
-- [report-schema.md](skills/meshify/references/report-schema.md) — `meshify.report/v1` field-level docs and the 22 warning codes
+- [report-schema.md](skills/meshify/references/report-schema.md) — `meshify.report/v1` field-level docs and the 23 warning codes
 - Chinese translations: [README.zh-CN.md](README.zh-CN.md) / [SKILL.zh-CN.md](skills/meshify/SKILL.zh-CN.md) / [references/zh-CN/](skills/meshify/references/zh-CN/)
 
 ## Contributing

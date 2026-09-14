@@ -20,8 +20,9 @@
 | 码 | 场景 | 含义 |
 |---|---|---|
 | `SMALL_MESH_SKIPPED` | simplify/lod | 子网格 < min-faces，跳过简化原样保留（坑 12） |
+| `UV_SEAM_DECIMATION_LIMITED` | simplify | 带 UV 子网格深度减面停在请求目标之上：UV 岛接缝等效锁定边界、阻止进一步坍缩（结构性下限，非误差界停止）。要压更低请先减面后贴图 |
 | `MATERIAL_DEGRADED_TO_BASE_COLOR` | Tier1 简化/分割 | UV 无法重映射，材质降级仅 baseColor 标量（贴图剥离） |
-| `UV_REMAP_APPROXIMATED` | Tier1 几何重建 | 塌缩/重组点 UV 按最近面重心插值（近似） |
+| `UV_REMAP_APPROXIMATED` | simplify/lod（双内核） | 被简化的贴图网格从保留顶点子集采样；Tier1 另对重组点按最近面重心插值（近似） |
 | `NON_MANIFOLD_INPUT` | plane 切割 | 输入疑似重合壳/非流形，截面未能闭合封口 |
 | `FRAGMENT_FACES_KEPT` | plane 封口 | 零面积碎片三角形保留（删了会开洞，坑 6） |
 | `DOUBLE_SIDED_FORCED` | 分割/贴图产物 | 材质强制双面（开口壳防背面剔除，坑 3） |
@@ -50,7 +51,9 @@
 
 **Tier1 import 深检 FAIL**：`cd packages-py/kernel-py && uv sync` 后重跑 `meshify doctor` 验证（doctor 每次都现场探测）。
 
-**简化后面数没降**：全是 < min-faces 的小子网格（看 warnings）；调低 `--min-faces` 或确认输入。
+**简化后面数没降**：要么全是 < min-faces 的小子网格（warnings 里 `SMALL_MESH_SKIPPED`，调低
+`--min-faces`）；要么是先贴图后减面、被 UV 岛接缝顶住（`UV_SEAM_DECIMATION_LIMITED`——从
+未贴图的模型重跑：先减面后贴图）。
 
 **平面切割 exit 6「未与模型相交」**：`--position` 在 [-1,1] 之外或平面贴着包围盒表面；
 用 inspect 的 bbox 换算原生坐标走 `--origin/--normal`。

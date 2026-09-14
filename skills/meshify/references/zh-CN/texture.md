@@ -18,6 +18,9 @@ meshify texture <input> --map <mode> [--image tex.png] [--metallic 0] [--roughne
 
 ## 行为
 
+- **管线顺序：贴图放最后。** 先 simplify/segment 再贴图——投影会把 UV 岛接缝烤进网格，
+  接缝等效于锁定边界，会封死之后任何深度减面的下限（`UV_SEAM_DECIMATION_LIMITED`，
+  详见 simplify.md）。减面后重贴图代价很低，贴图后再跟接缝地板较劲不划算
 - `--map uv` 但模型无 UV → 自动盒式投影 + `AUTO_BOX_UV_GENERATED`
 - UV 是合并产生的色块图集（≤64px 贴图特征）→ 忽略并盒式回退 + `ATLAS_UV_IGNORED`（坑 2）
 - `--image`：绑定 baseColor 贴图；非 PNG/JPEG（webp/tiff/bmp/gif）自动规范化转 PNG +

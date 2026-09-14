@@ -20,8 +20,9 @@
 | Code | Context | Meaning |
 |---|---|---|
 | `SMALL_MESH_SKIPPED` | simplify/lod | Submesh < min-faces, skipped and kept as-is (pitfall 12) |
+| `UV_SEAM_DECIMATION_LIMITED` | simplify | Deep decimation on UV-bearing submeshes stopped above the requested target: UV island seams act as locked borders that block further collapse (a structural floor, not an error-bound stop). Simplify before texturing to reach lower counts |
 | `MATERIAL_DEGRADED_TO_BASE_COLOR` | Tier1 simplify/segment | UVs could not be remapped; material degraded to baseColor scalar only (textures stripped) |
-| `UV_REMAP_APPROXIMATED` | Tier1 geometry rebuild | UVs of collapsed/rebuilt points remapped by nearest-face barycentric interpolation (approximate) |
+| `UV_REMAP_APPROXIMATED` | simplify/lod (both tiers) | Simplified textured meshes sample from the retained vertex subset; Tier1 additionally remaps rebuilt points by nearest-face barycentric interpolation (approximate) |
 | `NON_MANIFOLD_INPUT` | plane cut | Input looks like coincident shells / non-manifold; the cross-section could not be capped watertight |
 | `FRAGMENT_FACES_KEPT` | plane capping | Zero-area fragment triangles kept (removing them opens holes, pitfall 6) |
 | `DOUBLE_SIDED_FORCED` | segment/texture artifacts | Materials forced double-sided (open shells vs. backface culling, pitfall 3) |
@@ -52,8 +53,10 @@ an error layer when both fail) — reconnect and reopen.
 **Tier1 deep-import check FAILs**: run `cd packages-py/kernel-py && uv sync`, then `meshify doctor`
 again (doctor re-probes live every time).
 
-**Face count didn't drop after simplify**: everything is small submeshes under min-faces (check
-warnings); lower `--min-faces` or double-check the input.
+**Face count didn't drop after simplify**: either everything is small submeshes under min-faces
+(`SMALL_MESH_SKIPPED` in warnings — lower `--min-faces`), or the model was textured before
+simplifying and UV island seams cap the decimation (`UV_SEAM_DECIMATION_LIMITED` — re-run from the
+untextured model: simplify first, texture after).
 
 **Plane cut exits 6 "does not intersect the model"**: `--position` outside [-1,1], or the plane
 grazes the bbox surface; use inspect's bbox to compute native coordinates and go with

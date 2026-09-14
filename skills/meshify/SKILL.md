@@ -47,7 +47,7 @@ Got a model
   │    ├─ Single object → meshify simplify --ratio 0.5
   │    ├─ Assembly to split → meshify segment --mode connected
   │    └─ Cut in half → meshify segment --mode plane --axis x
-  ├─ Needs textures → meshify texture --map box --image tex.png
+  ├─ Needs textures → meshify texture --map box --image tex.png   # texture LAST: UV seams cap later simplification
   ├─ Needs another format → meshify convert --to stl|obj|ply|gltf
   ├─ Needs progressive loading → meshify lod --levels 3 --ratio 0.5
   └─ Web delivery in one step → meshify optimize --ratio 0.5 --texture-size 2048
@@ -82,7 +82,10 @@ meshify segment model.glb --mode connected --min-faces 50 --preview-html
 meshify segment model.glb --mode plane --axis x --position 0 --preview-html
 meshify segment model.glb --mode plane --origin "0,10,0" --normal "0,1,0"
 
-# Texture (box projection; generates UVs when missing and discloses it)
+# Texture (box projection; generates UVs when missing and discloses it).
+# Order matters: simplify BEFORE texturing — projection bakes UV island seams into the mesh,
+# and those seams act as locked borders that cap any later deep simplification
+# (UV_SEAM_DECIMATION_LIMITED). Simplify first, then texture, then convert/compress.
 meshify texture model.glb --map box --image diffuse.png --metallic 0.1 --preview-html
 
 # Format conversion (STL for slicers)

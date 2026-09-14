@@ -33,7 +33,8 @@
 
 `path` `format` `bytes` `vertices` `faces` `files[]`
 
-- `bytes`: 主产物单文件大小（多部件命令为部件字节总和）
+- `bytes`: `path` 所指单文件大小——多部件/lod 链取 part_000/lod_0；
+  全集交付总体积在 `metrics.bytes_total`（逐文件权威来源 `files[]`）
 - `files[]`: `{path, bytes, role}`，role ∈ `asset|preview|report|part|lod`
   ——Agent 拿全部产物路径的唯一来源
 
@@ -44,8 +45,9 @@
 | `duration_ms` | 全部 | 耗时（必有） |
 | `face_reduction` | 产出面数的命令 | 1 - out_faces/in_faces（数学口径，**可为负**：产物面数多于输入时，如空输入 0 面转出几何、或封口/合并引入新面；判定削减与否看符号而非数值大小） |
 | `byte_reduction` | 同上 | 1 - out_bytes/in_bytes（绑贴图后可为负） |
-| `ratio_actual` | simplify | 实际保留面比（受 min-faces 跳过影响） |
+| `ratio_actual` | simplify | 实际保留面比（可因 min-faces 跳过或 UV 接缝地板高于请求值，后者见 `UV_SEAM_DECIMATION_LIMITED`） |
 | `max_error_normalized` | Tier0 simplify | 归一化几何偏差上界（meshopt error 语义） |
+| `bytes_total` | 多部件/lod 命令 | 全部产物文件字节总和（交付总体积；`output.bytes` 只覆盖 `output.path` 单文件） |
 | `parts[]` | segment | `{index, path, vertices, faces}` 逐部件 |
 | `lod_levels[]` | lod | `{level, path, faces, vertices, bytes, ratio}` 逐级 |
 | `derives_from` | 派生产物 | 源文件路径 |

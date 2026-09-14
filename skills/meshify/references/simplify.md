@@ -23,10 +23,16 @@ meshify simplify <input> [--ratio 0.5] [--target-faces N] [--error 0.01]
 
 - **Per-submesh processing (pitfall 1 guard)**: every submesh of a multi-material model is
   simplified independently with materials kept as-is; nothing collapses into an untextured white model
-- **Tier0** (meshoptimizer WASM): `--error` is active; the manifest carries `max_error_normalized`
+- **Tier0** (meshoptimizer WASM): `--error` is active; the manifest carries `max_error_normalized`;
+  simplified textured meshes disclose `UV_REMAP_APPROXIMATED` (textures sample from the retained
+  vertex subset in collapsed regions)
 - **Tier1** (pyfqmr): `--aggressiveness` is active; textured meshes are not welded by position
   (duplicate seam vertices are kept), and UVs of collapsed vertices are remapped by barycentric
-  interpolation over the nearest triangle (`UV_REMAP_APPROXIMATED`)
+  interpolation over the nearest triangle (same `UV_REMAP_APPROXIMATED` code)
+- **UV seam floor (both tiers)**: deep decimation on UV-bearing meshes is capped by UV island seams —
+  seam vertices are split in index space and act as locked borders the decimator cannot collapse across,
+  so `--no-keep-border`/`--merge` do not help. When a UV-bearing submesh ends far above its requested
+  target, `UV_SEAM_DECIMATION_LIMITED` discloses it; simplify before texturing to reach lower counts
 - Animated/skinned input is forced to Tier0 (`SKIN_ANIMATION_PRESERVED`)
 
 ## Output
@@ -39,10 +45,14 @@ meshify simplify <input> [--ratio 0.5] [--target-faces N] [--error 0.01]
 "metrics": { "face_reduction": 0.7, "ratio_actual": 0.3, "max_error_normalized": 0.004 }
 ```
 
-`ratio_actual` is the fraction actually kept (it can exceed the requested value when min-faces skips submeshes).
+`ratio_actual` is the fraction actually kept (it can exceed the requested value when min-faces skips
+submeshes, or when UV seams cap decimation — `UV_SEAM_DECIMATION_LIMITED`).
 
 ## Advice
 
 - Web display: start at `--ratio 0.3 --error 0.01`; push further only while `max_error_normalized` stays under 0.01
+- **Order matters: simplify before texturing.** Projection-generated UV islands split seam vertices,
+  which act as locked borders during decimation; texturing first caps how far you can later simplify.
+  When the model has no UVs yet, simplify first, then `texture`
 - Don't simplify models under 1000 faces total (little gain, visible degradation; min-faces blocks most of it for you)
 - For heavier reduction plus size compression, go straight to `optimize` (simplification + meshopt in one pipeline)

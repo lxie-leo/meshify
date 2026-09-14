@@ -18,6 +18,10 @@ meshify texture <input> --map <mode> [--image tex.png] [--metallic 0] [--roughne
 
 ## Behavior
 
+- **Pipeline order: texture last.** Simplify/segment before texturing — projection bakes UV island
+  seams into the mesh, and those seams act as locked borders that cap any later deep simplification
+  (`UV_SEAM_DECIMATION_LIMITED`, see simplify.md). Retexturing after simplification is cheap;
+  fighting the seam floor after texturing is not
 - `--map uv` on a model without UVs → automatic box projection + `AUTO_BOX_UV_GENERATED`
 - UVs that are a color-block atlas from merging (signature: ≤64px textures) → ignored, box fallback
   + `ATLAS_UV_IGNORED` (pitfall 2)
