@@ -39,7 +39,7 @@ describe('root launcher (bin/meshify)', () => {
 		// 只带启动器不带仓库其余部分 → dist 缺失走构建分支。
 		// 隔离桶自带空 workspace，阻止 pnpm 向上解析到真实仓库（防止误构建父级）；
 		// pnpm 可达时空构建后仍缺 dist → "still missing" 分支；不可达时直接指引分支——两者均 exit 8
-		fs.copyFileSync(path.join(ROOT, 'bin', '_bootstrap.js'), path.join(dir, 'bin', '_bootstrap.js'));
+		fs.copyFileSync(path.join(ROOT, 'bin', '_bootstrap.mjs'), path.join(dir, 'bin', '_bootstrap.mjs'));
 		fs.copyFileSync(SHIM, path.join(dir, 'bin', path.basename(SHIM)));
 		fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'launcher-isolation', private: true }));
 		fs.writeFileSync(path.join(dir, 'pnpm-workspace.yaml'), 'packages: []\n');

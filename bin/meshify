@@ -1,6 +1,6 @@
 #!/bin/sh
 # meshify 根启动器（POSIX）：插件 PATH（<plugin-root>/bin）与仓库检出共用。
-# 统一经 bin/_bootstrap.js 转发到 packages/cli（dist 缺失时先自动构建）。本文件必须保持 LF。
+# 统一经 bin/_bootstrap.mjs 转发到 packages/cli（dist 缺失时先自动构建）。本文件必须保持 LF。
 set -eu
 dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-exec node "$dir/_bootstrap.js" "$@"
+exec node "$dir/_bootstrap.mjs" "$@"
