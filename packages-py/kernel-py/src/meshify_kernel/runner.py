@@ -279,7 +279,7 @@ def _cmd_texture(input_path, params, output_path, output_dir, overwrite):
         raise KernelError(EXIT_PARAM_CONFLICT, "texture requires payload.output")
     from .services import texture as svc
 
-    # --image 可选（与 Tier0 契约一致：无贴图时仅重生成 UV）
+    # --image 可选（与 Tier0 协议一致：无贴图时仅重生成 UV）
     image = params.get("image")
     result = svc.texture_file(
         input_path,

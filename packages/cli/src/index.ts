@@ -12,7 +12,7 @@ import { registerDoctor } from './commands/doctor.js';
 
 /**
  * meshify CLI 入口。
- * 退出码契约（Agent 依赖；详见 SKILL.md / references）：
+ * 退出码协议（Agent 依赖；详见 SKILL.md / references）：
  * 0 成功 | 2 输入不可读 | 3 格式不支持 | 4 参数冲突/拒绝覆盖 | 5 执行器不可用(Tier1)
  * 6 算法失败 | 7 资源超限/部分成功 | 8 内部错误
  */
@@ -35,7 +35,7 @@ const program = new Command()
 		writeErr: (str) => process.stderr.write(str),
 	})
 	// commander 用法错误（未知选项/非法枚举值）统一进退出码 4（参数冲突），
-	// 不让契约外的 exit 1 泄漏给 Agent 调用方。help/version 展示走 exit 0。
+	// 不让协议外的 exit 1 泄漏给 Agent 调用方。help/version 展示走 exit 0。
 	.exitOverride((err) => {
 		if (/^commander\.(help|version)/.test(err.code ?? '')) process.exit(0);
 		process.stderr.write(`Parameter error (exit 4): ${err.message}\n`);

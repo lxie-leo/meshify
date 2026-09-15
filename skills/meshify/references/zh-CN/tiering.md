@@ -1,6 +1,6 @@
 > [English](../tiering.md) | 简体中文
 
-# tiering —— 双内核仲裁
+# tiering —— 双内核判定
 
 ## 为什么两层
 
@@ -11,7 +11,7 @@
 | 独有能力 | meshopt/draco 压缩、WebP 贴图、动画/蒙皮结构保留 | **STEP/STP CAD 读取**、跨子网格焊接拆实体 |
 | 启动 | ~0.1s | 冷启动 ~2s（uv run） |
 
-## 仲裁规则（tier-orchestrator，硬规则）
+## 判定规则（tier-orchestrator，硬规则）
 
 1. **动画/蒙皮/morph 输入 → 强制 Tier0**
    trimesh 管线加载即丢动画（maestro 勘察实证）。检测到 animations/skins 时路由层直接改走

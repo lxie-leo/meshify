@@ -328,7 +328,7 @@ def build_report(
 
 
 def warn(code: str, message: str, mesh: Optional[str] = None) -> Dict[str, Any]:
-    """契约警告项（code 必须在 WARNING_CODES 枚举内，否则 TS 侧 zod 拒收）。"""
+    """协议警告项（code 必须在 WARNING_CODES 枚举内，否则 TS 侧 zod 拒收）。"""
     item: Dict[str, Any] = {"code": code, "message": message}
     if mesh is not None:
         item["mesh"] = mesh

@@ -36,12 +36,12 @@ export interface TierRoute {
 	handled: boolean;
 	/** 实际执行 Tier（handled=false 时恒为 'ts-wasm'） */
 	tier: Tier;
-	/** 降级/保留动画等仲裁告警（并入 manifest） */
+	/** 降级/保留动画等判定告警（并入 manifest） */
 	warnings: ReportWarning[];
 }
 
 /**
- * Tier 仲裁统一入口（plan §Step 1.2 两条硬规则在此落地）：
+ * Tier 判定统一入口（plan §Step 1.2 两条硬规则在此落地）：
  * 1. 输入含 skin/蒙皮/动画/morph → 自动降回 Tier0 + SKIN_ANIMATION_PRESERVED
  * 2. Tier1 需要但未就绪：无 TS 回退（STEP）→ exit 5 + 安装指引；
  *    有回退 → 降级 Tier0 + TIER_DOWNGRADED（绝不信默降级）

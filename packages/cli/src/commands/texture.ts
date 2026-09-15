@@ -88,7 +88,7 @@ export function registerTexture(program: Command): void {
 		if (opts.image !== undefined) {
 			progress('Binding texture…');
 			// 必须 await：贴图读取/解码失败要在命令内抛出（exit 2 + manifest），
-			// 漏掉会变成 unhandled rejection → 进程裸崩 exit 1（契约外）
+			// 漏掉会变成 unhandled rejection → 进程裸崩 exit 1（协议外）
 			await attachBaseColorImage(loaded.doc, String(opts.image), mode, warnings);
 		}
 		if (params.metallic !== undefined || params.roughness !== undefined) {

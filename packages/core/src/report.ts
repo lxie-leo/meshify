@@ -24,7 +24,7 @@ export interface ReportDraft {
 	durationMs?: number;
 }
 
-/** 组装 manifest（plan §3.3 契约；幂等凭证 = params 全量回显 + derives_from 血缘）。 */
+/** 组装 manifest（plan §3.3 协议；幂等凭证 = params 全量回显 + derives_from 血缘）。 */
 export function generateReport(draft: ReportDraft): MeshifyReport {
 	const inputFaces = draft.input.faces;
 	const outputFaces = draft.output?.faces ?? null;

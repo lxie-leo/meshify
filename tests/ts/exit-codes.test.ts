@@ -1,5 +1,5 @@
 /**
- * 退出码契约（快照式断言）：0/2/3/4/5/6/7 全路径 + Tier 仲裁 + 覆盖契约。
+ * 退出码协议（快照式断言）：0/2/3/4/5/6/7 全路径 + Tier 判定 + 覆盖协议。
  * 大网格 exit 7 用注入超限参数的内核路径覆盖（不依赖 --big 生成物）。
  */
 
@@ -89,7 +89,7 @@ describe('退出码 4：参数冲突 / 拒绝覆盖', () => {
 	});
 });
 
-describe('退出码 5：Tier 仲裁（STEP 必须走 Tier1）', () => {
+describe('退出码 5：Tier 判定（STEP 必须走 Tier1）', () => {
 	it('STEP + --tier ts → exit 5 + 安装指引', () => {
 		const r = cli(['inspect', FIX('step/cube.step'), '--tier', 'ts']);
 		expect(r.code).toBe(5);
@@ -113,7 +113,7 @@ describe('退出码 6：算法失败', () => {
 	});
 });
 
-describe('commander 用法错误 → 退出码 4（契约内收敛）', () => {
+describe('commander 用法错误 → 退出码 4（协议内收敛）', () => {
 	it('非法枚举值（--map xyz）', () => {
 		const r = cli(['texture', FIX('glb/dense.glb'), '--map', 'xyz']);
 		expect(r.code).toBe(4);

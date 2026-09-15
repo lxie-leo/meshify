@@ -41,7 +41,7 @@ meshopt/draco 是 WASM 编码器（Tier0 专属）。Tier1 路线输出**未压�
 "metrics": { "face_reduction": 0.5, "byte_reduction": 0.82 }
 ```
 
-体积削减主要来自贴图（WebP + 降采样）；几何 meshopt 通常再省 30–60% 顶点buffer。
+体积削减主要来自贴图（WebP + 降采样）；几何 meshopt 通常再省 30–60% 顶点 buffer。
 
 ## 预览页（--preview-html）
 

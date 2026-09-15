@@ -1,5 +1,5 @@
 /**
- * 语义化退出码契约（与 docs/plan.md §3.4 对齐）。
+ * 语义化退出码协议（与 docs/plan.md §3.4 对齐）。
  *
  * Agent 按 exit code 决定下一步动作；所有码都必须在 SKILL.md 中披露。
  */

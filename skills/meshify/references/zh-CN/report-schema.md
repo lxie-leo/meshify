@@ -3,13 +3,13 @@
 # report-schema —— meshify.report/v1 字段文档
 
 权威定义：`packages/core/src/schema.ts`（zod，运行时校验）与其导出的 JSON Schema
-（draft-07，ajv 交叉校验）。本文是解读向摘要；两份 schema 定义由契约测试强制一致。
+（draft-07，ajv 交叉校验）。本文是解读向摘要；两份 schema 定义由协议测试强制一致。
 
 ## 顶层
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `schema` | `"meshify.report/v1"` | 契约版本 |
+| `schema` | `"meshify.report/v1"` | 协议版本 |
 | `tool` | `{name, version, tier}` | `tier`: `ts-wasm` \| `python-uv` |
 | `command` | string | inspect/simplify/segment/texture/convert/lod/optimize |
 | `input` | InputInfo | 输入侧统计 |
@@ -53,7 +53,7 @@
 | `derives_from` | 派生产物 | 源文件路径 |
 | `tier_note` | 全部 | 本次路由/执行说明（文字说明） |
 
-## 消费建议（Agent）
+## 解读建议（Agent）
 
 1. `exit_code !== 0` → 按码行动（troubleshooting.md 的动作表）
 2. `errors[]` 非空 → 即使 exit 0 也要读（部分成功场景 exit 7 时 errors 有详情）
@@ -68,6 +68,6 @@ TS 侧命令在 MeshifyError 早失败（输入不可读/参数冲突/同格式�
 rethrow 前尽力落一份最小 manifest：`output: null`、`params: {failed_early: true}`、
 `errors: [原因]`、`exit_code` 与进程退出码一致；输入结构未知时 `input.vertices/faces`
 为 0 兜底（不代表真实统计）。`--json` 下 stdout 照常输出完整 JSON——**stdout 的
-manifest 契约在成功与失败路径上一致**，Agent 统一按「解析 stdout → 失败看
+manifest 协议在成功与失败路径上一致**，Agent 统一按「解析 stdout → 失败看
 errors[] + exit_code」处理。Tier1 路径的失败 manifest 由 py runner 组装（信息更全，
 input 为实测统计），TS 桥原样转发。

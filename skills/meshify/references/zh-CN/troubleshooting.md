@@ -28,8 +28,8 @@
 | `DOUBLE_SIDED_FORCED` | 分割/贴图产物 | 材质强制双面（开口壳防背面剔除，坑 3） |
 | `TEXTURE_DOWNSCALED` | optimize | 贴图降采样（超过 `--texture-size`，坑 11） |
 | `TEXTURE_FORMAT_CONVERTED` | optimize/texture | 非 PNG/JPEG 贴图规范化转 PNG（glTF 核心只内建这两种位图格式） |
-| `TIER_DOWNGRADED` | tier 仲裁 | Tier1 不可用降级 Tier0 执行（STEP 除外——它直接 exit 5） |
-| `SKIN_ANIMATION_PRESERVED` | tier 仲裁 | 动画输入强制 Tier0 保留动画 |
+| `TIER_DOWNGRADED` | tier 判定 | Tier1 不可用降级 Tier0 执行（STEP 除外——它直接 exit 5） |
+| `SKIN_ANIMATION_PRESERVED` | tier 判定 | 动画输入强制 Tier0 保留动画 |
 | `ATLAS_UV_IGNORED` | texture --map uv | 色块图集 UV 忽略，盒式回退（坑 2） |
 | `AUTO_BOX_UV_GENERATED` | texture --map uv | 无 UV 自动盒式投影 |
 | `PARTIAL_SUCCESS` | 多子网格处理 | 部分子网格失败（exit 7 伴随） |

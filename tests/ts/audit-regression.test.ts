@@ -67,7 +67,7 @@ describe('审计回归：大小写不敏感文件系统同文件保护', () => {
 // ------------------------------------------------------------------
 // 审计 #6/#7：convert 防坏产物 + 伴生文件入 manifest.files
 // ------------------------------------------------------------------
-describe('审计回归：convert 输出契约', () => {
+describe('审计回归：convert 输出协议', () => {
 	it('-o 扩展名与 --to 不一致 → 4（曾把 STL 字节写进 .glb 名）', () => {
 		const dir = freshDir('audit-convert-ext');
 		const r = cli(['convert', FIX('glb/dense.glb'), '--to', 'stl', '-o', path.join(dir, 'bad.glb'), '--json']);
@@ -103,9 +103,9 @@ describe('审计回归：convert 输出契约', () => {
 });
 
 // ------------------------------------------------------------------
-// 审计 #2/#8：texture 参数契约
+// 审计 #2/#8：texture 参数协议
 // ------------------------------------------------------------------
-describe('审计回归：texture 参数契约', () => {
+describe('审计回归：texture 参数协议', () => {
 	it('--image 不是可解码图片 → exit 2（曾裸 exit 1 无诊断）', () => {
 		const dir = freshDir('audit-tex-image');
 		fs.copyFileSync(FIX('glb/small.glb'), path.join(dir, 'in.glb'));

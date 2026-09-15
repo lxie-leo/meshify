@@ -1,7 +1,7 @@
 {
   "name": "@meshify/core",
   "version": "0.1.0",
-  "description": "Meshify 契约层：共享类型、manifest schema、报告生成、Tier 仲裁与 Python 桥",
+  "description": "Meshify 协议层：共享类型、manifest schema、报告生成、Tier 判定与 Python 桥",
   "type": "module",
   "license": "MIT",
   "main": "./dist/index.js",

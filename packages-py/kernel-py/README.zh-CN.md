@@ -33,4 +33,4 @@ uv sync
 ## 服务层来源
 
 迁移自 maestro backend `services/model_edit/`（简化/分割/贴图/STEP），
-剥离 FastAPI/DB；几何算法与防坑逻辑原样保留，警告改为契约警告码写入 manifest。
+剥离 FastAPI/DB；几何算法与防坑逻辑原样保留，警告改为协议警告码写入 manifest。

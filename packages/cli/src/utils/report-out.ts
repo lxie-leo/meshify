@@ -31,7 +31,7 @@ export function emitReport(draft: ReportDraft, opts: EmitOptions): MeshifyReport
 export function emitExistingReport(report: MeshifyReport, opts: EmitOptions): MeshifyReport {
 	const validated = validateReport(report);
 	if (!validated.ok) {
-		// 契约违约属内部错误：报告照写（排障用），进程 exit 8
+		// 协议违约属内部错误：报告照写（排障用），进程 exit 8
 		const detail = validated.errors.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
 		writeReportFile(opts.reportPath, { ...report, errors: [...report.errors, `manifest failed schema validation: ${detail}`] });
 		throw new MeshifyError(EXIT_INTERNAL, `manifest failed schema validation (written to ${opts.reportPath}): ${detail}`);

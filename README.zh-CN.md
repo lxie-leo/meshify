@@ -7,13 +7,13 @@
 [![CI](https://github.com/lxie-leo/meshify/actions/workflows/ci.yml/badge.svg)](https://github.com/lxie-leo/meshify/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-informational.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A518.17-339933?logo=node.js&logoColor=white)](packages/cli/package.json)
-[![Tier0](https://img.shields.io/badge/Tier0-zero--python-646CFF?logo=typescript&logoColor=white)](#-双层内核-tiering)
+[![Tier0](https://img.shields.io/badge/Tier0-zero--python-646CFF?logo=typescript&logoColor=white)](#双层内核-tiering)
 
-Meshify 把三维模型处理成 Web / AR / 移动端可交付的形态。它首先为 AI Agent（Claude Code、Cursor、Codex 等）设计：每条命令都产出结构化 manifest，自动补 UV、贴图剥离这类降级一律以警告码写进报告；同时也是一个开发者可以直接用的 CLI。
+Meshify 把三维模型加工成可直接交付 Web / AR / 移动端的成品。它优先为 AI Agent（Claude Code、Cursor、Codex 等）设计：每条命令都产出结构化 manifest，自动补 UV、贴图剥离这类降级一律以警告码写进报告；同时也是开发者可以直接上手的 CLI。
 
 输入 `glb` / `gltf` / `obj` / `stl` / `ply` 开箱即用；`step` / `stp`（CAD）走 Tier1 内核。
 
-## ✨ 特性
+## 特性
 
 - 八个命令：`inspect` / `simplify` / `segment` / `texture` / `convert` / `lod` / `optimize` / `doctor`
 - 失败也产出结构化错误报告（`errors[]` + `failed_early`），不止一个退出码
@@ -22,7 +22,7 @@ Meshify 把三维模型处理成 Web / AR / 移动端可交付的形态。它首
 - 质量断言独立于内核实现（自研 Hausdorff 采样 / 边界边水密性计数），双内核一致性有专门测试
 - `--preview-html` 生成单文件 before/after 对比页
 
-## 📦 安装
+## 安装
 
 **从 GitHub 安装到 Agent 宿主**（推荐，无需克隆本仓库；[skills CLI](https://github.com/vercel-labs/skills)，Qoder 官方同款）：
 
@@ -70,7 +70,7 @@ pnpm install && pnpm build
 pnpm meshify --help
 ```
 
-## 🚀 快速上手
+## 快速上手
 
 ```bash
 # 先看结构：面数 / 子网格 / 材质 / 贴图 / 包围盒
@@ -103,7 +103,7 @@ meshify convert part.step --to glb
 
 通用选项：`-o <path>`、`--json`、`--overwrite`、`--tier auto|ts|py`、`--preview-html`、`--force`。全部示例与决策树见 [SKILL.md](skills/meshify/SKILL.md)。
 
-## 🧭 命令一览
+## 命令一览
 
 | 命令 | 作用 | 关键语义 |
 |---|---|---|
@@ -116,7 +116,7 @@ meshify convert part.step --to glb
 | `optimize` | 一站式轻量化（减面 + meshopt/draco + 贴图压缩/降采样） | 依赖不可用时降级并披露，不失败 |
 | `doctor` | 环境自检（Tier0/Tier1 就绪性、uv 安装指引） | `--json` 输出机器可读结果 |
 
-## 🤖 Agent 契约
+## Agent 协议
 
 退出码（Agent 按码决策）：
 
@@ -135,7 +135,7 @@ meshify convert part.step --to glb
 
 每条命令在 `<输入名>.meshify/` 下写 `<输入名>.<op>.report.json`，内容与 `--json` 的 stdout 一致。效果看 `metrics.face_reduction / byte_reduction`，降级看 `warnings[].code`——字段级文档与 23 个警告码全表见 [report-schema.md](skills/meshify/references/report-schema.md)，排障见 [troubleshooting.md](skills/meshify/references/troubleshooting.md)。
 
-## ⚙️ 双层内核（Tiering）
+## 双层内核（Tiering）
 
 | 层 | 技术 | 覆盖 | 启动条件 |
 |---|---|---|---|
@@ -144,7 +144,7 @@ meshify convert part.step --to glb
 
 路由规则：STEP 输入强制 Tier1，未装报 exit 5；动画 / 蒙皮输入强制 Tier0（保动画）；其余默认 Tier0。`--tier auto|ts|py` 可干预，`--tier py` 走 Python 实现，manifest 结构与 Tier0 完全一致。详见 [tiering.md](skills/meshify/references/tiering.md)。
 
-## 📁 输出布局
+## 输出布局
 
 ```
 model.glb
@@ -156,7 +156,7 @@ model.meshify/
   └─ model.optimized.preview.html   # --preview-html 自包含对比页
 ```
 
-## 🧪 开发
+## 开发
 
 ```bash
 pnpm build                          # 构建（core / kernel-ts / cli）
@@ -177,26 +177,26 @@ CI（[ci.yml](.github/workflows/ci.yml)）：win/mac/linux × Node 18/20/22 的 
 <summary>仓库结构</summary>
 
 ```
-packages/core          契约层：zod schema / 警告码 / 退出码 / Tier 路由 / Python 桥
+packages/core          协议层：zod schema / 警告码 / 退出码 / Tier 路由 / Python 桥
 packages/kernel-ts     Tier0 内核：io/inspect/simplify/segment/texture/convert/lod/optimize
 packages/cli           commander CLI：8 命令 + 输出管理 + before/after 预览 HTML
 packages-py/kernel-py  Tier1 内核：trimesh/gmsh 服务层（uv run python -m meshify_kernel payload.json）
 skills/meshify         Agent Skill 本体：SKILL.md + references/ + 安装器
-tests/ts               契约(zod×ajv) / 质量(Hausdorff·水密性) / 单命令 / 退出码 / 双内核一致性 / e2e
+tests/ts               协议(zod×ajv) / 质量(Hausdorff·水密性) / 单命令 / 退出码 / 双内核一致性 / e2e
 fixtures               黄金样本生成器 + 提交的生成物（多材质/开口壳/STL/STEP/蒙皮动画/空几何）
 ```
 
 </details>
 
-## 📚 文档
+## 文档
 
 - [SKILL.md](skills/meshify/SKILL.md) — Skill 用法总览与决策树
-- [references/](skills/meshify/references/) — 各命令细节、报告 schema、Tier 仲裁、排障
+- [references/](skills/meshify/references/) — 各命令细节、报告 schema、Tier 判定、排障
 - [report-schema.md](skills/meshify/references/report-schema.md) — `meshify.report/v1` 字段级文档与 23 个警告码
 
-## 🤝 贡献
+## 贡献
 
-欢迎 issue 与 PR。改动后请保证 `pnpm build && pnpm test` 全绿；涉及契约（退出码 / 警告码 / manifest schema）的变更请同步更新 [references/](skills/meshify/references/) 与测试。
+欢迎 issue 与 PR。改动后请保证 `pnpm build && pnpm test` 全部通过；涉及协议（退出码 / 警告码 / manifest schema）的变更请同步更新 [references/](skills/meshify/references/) 与测试。
 
 ## License
 

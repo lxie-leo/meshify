@@ -128,7 +128,7 @@ describe('simplify 内核（UV 接缝地板披露）', () => {
 			minFaces: 1,
 		});
 		// 12 面小网格被接缝顶到零坍缩（after === before）也是合法地板场景——
-		// 警告契约测「披露」，不测减了多少
+		// 警告协议测「披露」，不测减了多少
 		expect(r.facesAfter).toBeLessThanOrEqual(r.facesBefore);
 		const w = r.warnings.find((x) => x.code === 'UV_SEAM_DECIMATION_LIMITED');
 		expect(w).toBeTruthy();

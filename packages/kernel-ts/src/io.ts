@@ -15,7 +15,7 @@ import { MeshoptDecoder, MeshoptEncoder } from 'meshoptimizer';
 
 /**
  * 新建静默 Document。prune/dedup 等 transform 经 doc.getLogger() 打进度日志
- * （console.info → stdout），而 stdout 是 --json manifest 的契约通道——所有
+ * （console.info → stdout），而 stdout 是 --json manifest 的协议通道——所有
  * 自建 Document（OBJ/STL/PLY 读取器、部件输出文档）必须压到 WARN 以下，
  * 否则 optimize 的 manifest 前会混入 "prune: Removed types..." 污染解析。
  */
@@ -30,7 +30,7 @@ export async function createIO(): Promise<NodeIO> {
 		const init = (async () => {
 			await MeshoptDecoder.ready;
 			await MeshoptEncoder.ready;
-			// stdout 是 --json manifest 的契约通道：库级 info 日志（prune/dedup 等
+			// stdout 是 --json manifest 的协议通道：库级 info 日志（prune/dedup 等
 			// transform 的进度输出走 console.info → stdout）必须压到 WARN 以下，
 			// 否则 optimize 的 manifest 前会混入 "prune: Removed types..." 污染解析
 			const io = new NodeIO()

@@ -1,12 +1,12 @@
 > [English](SKILL.md) | 简体中文
 >
-> 本文件是人类阅读的中文镜像；宿主实际加载的工作版是 [SKILL.md](SKILL.md)（英文，Agent 消费）。
+> 本文件是使用者阅读的中文镜像；宿主实际加载的工作版本是 [SKILL.md](SKILL.md)（英文，供 Agent 解读）。
 
 # meshify —— 3D 模型轻量化 Agent Skill
 
 ## 能力定位
 
-把三维模型处理成 Web/AR/移动端可交付的形态：减面、拆件、贴图、转格式、LOD、一键压缩。
+把三维模型加工成可直接交付 Web/AR/移动端的成品：减面、拆件、贴图、转格式、LOD、一键压缩。
 所有命令输出 `meshify.report/v1` manifest（JSON），按语义退出码报告结果。
 
 - **零配置即用**：Node ≥ 18.17 即可跑（Tier0：WASM 几何内核）
@@ -46,8 +46,7 @@
 ```
 
 **产物命令默认带 `--preview-html`**（simplify/segment/texture/convert/lod/optimize）：生成
-before/after 对比页，肉眼核对效果最快。关 = 省略该 flag——用户明确说不要预览、或批量/
-无人值守跑批时省略（HTML 内嵌 base64 模型，体积 ≈ 产物 1.33 倍；three.js 走 CDN 需联网）。
+before/after 对比页，肉眼核对效果最快。关 = 省略该 flag——用户明确说不要预览、或批量自动跑任务时省略（HTML 内嵌 base64 模型，体积 ≈ 产物 1.33 倍；three.js 走 CDN 需联网）。
 
 **semantic 的边界**：`--mode semantic` 认的是「朝向+位置」聚类，不是零件语义。装配体拆件用 connected；
 想按外观分区（平面/曲面/不同朝向）才用 semantic。
@@ -126,10 +125,10 @@ meshify doctor
 
 **失败路径同样产出 manifest**：非 0 退出码（输入不可读/参数冲突/空场景等早失败）时也会落
 最小 manifest（`errors[]` 带原因、`params.failed_early: true`、输入统计 0 值兜底），
-`--json` 下 stdout 契约不变——统一「先解析 stdout manifest，失败看 errors + exit_code」。
+`--json` 下 stdout 协议不变——统一「先解析 stdout manifest，失败看 errors + exit_code」。
 字段细节见 references/zh-CN/report-schema.md。
 
-## 退出码契约（Agent 按码决策）
+## 退出码协议（Agent 按码决策）
 
 | 码 | 含义 | 下一步 |
 |---|---|---|
@@ -142,7 +141,7 @@ meshify doctor
 | 7 | 资源超限/部分成功 | `--force` 或先拆件分批 |
 | 8 | 内部错误 | 附 report.json 反馈 |
 
-## Tier 仲裁（何时走 Python）
+## Tier 判定（何时走 Python）
 
 1. 输入含**动画/蒙皮/morph** → 强制 Tier0（trimesh 管线会丢动画），写 `SKIN_ANIMATION_PRESERVED`
 2. 输入是 **STEP** → 强制 Tier1；未装 → exit 5 + 安装指引（无 TS 回退，不降级）

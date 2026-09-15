@@ -91,7 +91,7 @@ export async function loadInput(inputPath: string, format: InputFormat): Promise
 				doc = plyToDocument(new Uint8Array(fs.readFileSync(inputPath)), path.basename(inputPath, '.ply'));
 				break;
 			case 'step':
-				// STEP 只能经 Tier1（convert 命令在 tier 仲裁处已分流，此处不可达）
+				// STEP 只能经 Tier1（convert 命令在 tier 判定处已分流，此处不可达）
 				throw new MeshifyError(
 					EXIT_INTERNAL,
 					'STEP input must go through Tier1 (Python/gmsh); the Tier0 load path is unreachable.',

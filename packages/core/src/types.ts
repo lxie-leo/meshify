@@ -83,7 +83,7 @@ export interface Metrics {
 	tier_note?: string;
 }
 
-/** meshify.report/v1 —— CLI 与 Agent 之间最重要的契约 */
+/** meshify.report/v1 —— CLI 与 Agent 之间最重要的协议 */
 export interface MeshifyReport {
 	schema: 'meshify.report/v1';
 	tool: {

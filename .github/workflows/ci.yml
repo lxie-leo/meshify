@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ---- Tier0 基线：3 OS × 3 Node，无 uv —— 一致性/Python 契约样本自动跳过 ----
+  # ---- Tier0 基线：3 OS × 3 Node，无 uv —— 一致性/Python 协议样本自动跳过 ----
   tier0:
     name: tier0 (${{ matrix.os }}, node ${{ matrix.node }})
     runs-on: ${{ matrix.os }}
@@ -47,7 +47,7 @@ jobs:
       - name: 测试（无 uv：Tier1 用例自动 skip）
         run: pnpm test
 
-  # ---- Tier1 全链路：uv sync 后一致性/跨语言契约全部生效 ----
+  # ---- Tier1 全链路：uv sync 后一致性/跨语言协议全部生效 ----
   tier1:
     name: tier1 (${{ matrix.os }}, node ${{ matrix.node }})
     runs-on: ${{ matrix.os }}

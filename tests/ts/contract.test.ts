@@ -1,4 +1,4 @@
-/** 契约测试：manifest 双向校验（zod × ajv × 真实产物 × Python 侧样本）。 */
+/** 协议测试：manifest 双向校验（zod × ajv × 真实产物 × Python 侧样本）。 */
 
 import { describe, it, expect } from 'vitest';
 import Ajv from 'ajv';
@@ -42,7 +42,7 @@ function minimalManifest() {
 	};
 }
 
-describe('manifest 契约：合成样本双向校验', () => {
+describe('manifest 协议：合成样本双向校验', () => {
 	it('最小合法 manifest 双实现均通过', () => {
 		expectAgreement(minimalManifest(), true, 'minimal');
 	});
@@ -80,7 +80,7 @@ describe('manifest 契约：合成样本双向校验', () => {
 	}
 });
 
-describe('manifest 契约：真实 CLI 产物', () => {
+describe('manifest 协议：真实 CLI 产物', () => {
 	it('inspect --json 产物 zod + ajv 双通过（Tier0）', () => {
 		const r = cli(['inspect', FIX('glb/multimat.glb'), '--json']);
 		expect(r.code).toBe(0);
@@ -109,8 +109,8 @@ describe('manifest 契约：真实 CLI 产物', () => {
 	});
 });
 
-describe('manifest 契约：Python 侧产物（无 uv 自动跳过）', () => {
-	it('kernel-py inspect manifest 双通过（跨语言契约）', async () => {
+describe('manifest 协议：Python 侧产物（无 uv 自动跳过）', () => {
+	it('kernel-py inspect manifest 双通过（跨语言协议）', async () => {
 		if (!hasUv() || !isKernelSynced(resolveKernelPyDir())) return;
 		const result = await runPythonKernel({
 			command: 'inspect', params: {}, input: FIX('step/cube.step'),

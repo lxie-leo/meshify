@@ -49,7 +49,7 @@ export function fixtureExists(p: string): boolean {
 	return fs.existsSync(FIX(p));
 }
 
-/** uv 可用性（一致性/契约的 Python 样本测试在无 uv 环境自动 skip）。 */
+/** uv 可用性（一致性/协议的 Python 样本测试在无 uv 环境自动 skip）。 */
 let uvOk: boolean | null = null;
 export function hasUv(): boolean {
 	if (uvOk === null) {

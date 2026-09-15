@@ -8,7 +8,7 @@ meshify 改动：
 - 平面定义支持 axis+position（[-1,1] 线性映射包围盒，maestro 滑块语义）
   与 origin/normal（原生坐标）双入口（CLI 已做互斥校验）
 - 部件写 output_dir/part_%03d.glb；未预声明的部件文件同样遵守 overwrite 约定
-- 警告按契约码写入 manifest
+- 警告按协议码写入 manifest
 """
 
 from __future__ import annotations

@@ -5,7 +5,7 @@ import { EXIT_EXECUTOR_UNAVAILABLE } from './exit-codes.js';
 import { warn, type ReportWarning } from './warnings.js';
 
 /**
- * Tier 仲裁（core 中唯一「知道两个内核存在」的模块）。
+ * Tier 判定（core 中唯一「知道两个内核存在」的模块）。
  *
  * 两条硬规则（plan §Step 1.2）：
  * 1. Tier1 输入含 skin/蒙皮/动画/morph 时自动降回 Tier0，

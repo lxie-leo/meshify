@@ -1,7 +1,7 @@
 [project]
 name = "meshify-kernel"
 version = "0.1.0"
-description = "meshify Tier1 Python 内核：STEP/CAD (gmsh) + trimesh 几何管线，manifest 契约 meshify.report/v1"
+description = "meshify Tier1 Python 内核：STEP/CAD (gmsh) + trimesh 几何管线，manifest 协议 meshify.report/v1"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }

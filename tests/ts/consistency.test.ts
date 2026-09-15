@@ -1,7 +1,7 @@
 /**
  * 双内核一致性（plan.md L281；无 uv 环境自动 skip）：
  * 同一输入 Tier0 与 Tier1 的 input 侧统计必须一致（顶点/面数/材质/贴图/bbox）。
- * kernel-py 输出的 manifest 同时被 zod 契约覆盖（contract.test.ts）。
+ * kernel-py 输出的 manifest 同时被 zod 协议覆盖（contract.test.ts）。
  */
 
 import { describe, it, expect } from 'vitest';
