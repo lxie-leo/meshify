@@ -63,12 +63,16 @@ sh skills/meshify/scripts/install.sh
 
 安装器复制 `SKILL.md + references/` 到宿主 skills 目录、构建 CLI（如缺失）、运行 `meshify doctor` 自检。Skill 用法见 [skills/meshify/SKILL.md](skills/meshify/SKILL.md)。
 
-**从仓库使用**：
+**从仓库使用**（无需 AI 宿主，可直接当命令行工具用）：
 
 ```bash
 pnpm install && pnpm build
 pnpm meshify --help        # 或：./bin/meshify --help（插件挂到 PATH 的同一启动器）
+# Windows CMD/PowerShell 也可直接敲：bin\meshify.cmd --help
+# dist 缺失时首次运行自动构建（需 pnpm），之后零开销
 ```
+
+SKILL.md 中的决策树与退出码表可作速查表。
 
 ## 快速上手
 

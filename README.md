@@ -82,12 +82,16 @@ The installer copies `SKILL.md + references/` into host skills directories, buil
 missing, and runs `meshify doctor` as a self-check. See [skills/meshify/SKILL.md](skills/meshify/SKILL.md)
 for skill usage.
 
-**From the repository**:
+**From the repository** (no AI host required — usable as a standalone CLI):
 
 ```bash
 pnpm install && pnpm build
 pnpm meshify --help        # or: ./bin/meshify --help (the launcher the plugin puts on PATH)
+# Windows CMD/PowerShell: bin\meshify.cmd --help
+# dist is auto-built on first run if missing (needs pnpm); zero overhead afterwards
 ```
+
+The decision tree and exit-code table in SKILL.md double as quick-reference sheets.
 
 ## Quick start
 
