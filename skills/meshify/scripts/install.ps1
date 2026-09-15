@@ -75,5 +75,5 @@ if ($Mode -in 'all', 'cli-only') {
     }
 }
 
-Write-Host 'Done. Verify: node packages\cli\bin\meshify.js inspect <model.glb>'
+Write-Host 'Done. Verify: bin\meshify inspect <model.glb>'
 Write-Host 'Tier1 (STEP/CAD) on demand: meshify doctor --install-uv; cd packages-py\kernel-py; uv sync'

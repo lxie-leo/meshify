@@ -17,6 +17,10 @@ texturing, format conversion, LOD chains, one-command compression. Every command
 that choice only affects what you read, not what you say to the user.
 
 - **Zero-install baseline**: runs on Node ≥ 18.17 (Tier0: WASM geometry kernel)
+- **CLI invocation**: the `meshify` command comes from the checkout/plugin root `bin/meshify`
+  launcher (auto-builds `packages/cli` on first run; needs pnpm). If the command is missing
+  entirely, the CLI is not installed — build it from the repository
+  (`pnpm install && pnpm build`, see README → Install)
 - **CAD support**: STEP/STP needs Tier1 (Python/uv + gmsh); when missing, exit 5 with install instructions
 - **Never overwrites by default**: artifacts go to `<input-dir>/<input-name>.meshify/`, re-running is
   idempotent; overwriting requires an explicit `--overwrite`

@@ -10,6 +10,8 @@
 所有命令输出 `meshify.report/v1` manifest（JSON），按语义退出码报告结果。
 
 - **零配置即用**：Node ≥ 18.17 即可跑（Tier0：WASM 几何内核）
+- **CLI 调用**：PATH 上的 `meshify` 来自检出/插件根的 `bin/meshify` 启动器（首次运行自动构建，需 pnpm）。
+  命令不存在 = CLI 未安装——从仓库构建（`pnpm install && pnpm build`，见 README → Install）
 - **CAD 增强**：STEP/STP 需要 Tier1（Python/uv + gmsh），未装时报 exit 5 并附安装指引
 - **默认不覆盖**：产物写 `<输入目录>/<输入名>.meshify/`，重复执行幂等安全；覆盖必须显式 `--overwrite`
 

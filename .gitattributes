@@ -1,0 +1,4 @@
+# 跨平台启动器行尾：sh 脚本必须 LF（CRLF 会破坏 shebang 解析），cmd 必须 CRLF
+bin/meshify text eol=lf
+bin/_bootstrap.js text eol=lf
+*.cmd text eol=crlf

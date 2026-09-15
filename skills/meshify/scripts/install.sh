@@ -88,5 +88,5 @@ if [ "$MODE" = "all" ] || [ "$MODE" = "cli-only" ]; then
 	run_doctor
 fi
 
-echo "Done. Verify: node packages/cli/bin/meshify.js inspect <model.glb>"
+echo "Done. Verify: ./bin/meshify inspect <model.glb>"
 echo "Tier1 (STEP/CAD) on demand: meshify doctor --install-uv && cd packages-py/kernel-py && uv sync"

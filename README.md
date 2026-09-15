@@ -64,9 +64,10 @@ claude plugin marketplace add lxie-leo/meshify
 claude plugin install meshify@meshify-skills
 ```
 
-> Note: the remote installs above deliver the skill documentation (`SKILL.md` + `references/`).
-> The CLI itself currently needs to be built from this repository (see below); `npx meshify`
-> becomes available once published to npm.
+> Note: the `npx skills` installs deliver the skill documentation (`SKILL.md` + `references/`) only;
+> build the CLI from a clone (below), or use `npx meshify` once published to npm. The Claude Code
+> plugin additionally puts the repository's `bin/` on the session PATH: `meshify` works right away,
+> auto-building on first run (one-time per install/update, needs pnpm).
 
 **From a clone** (the installer builds the CLI and copies the skill into detected host directories):
 
@@ -85,7 +86,7 @@ for skill usage.
 
 ```bash
 pnpm install && pnpm build
-pnpm meshify --help
+pnpm meshify --help        # or: ./bin/meshify --help (the launcher the plugin puts on PATH)
 ```
 
 ## Quick start

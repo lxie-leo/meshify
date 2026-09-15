@@ -50,7 +50,7 @@ claude plugin marketplace add lxie-leo/meshify
 claude plugin install meshify@meshify-skills
 ```
 
-> 注意：以上远程安装装入的是 skill 文档（`SKILL.md` + `references/`）。CLI 本体目前需在本仓库内构建（见下），npm 发布后将支持 `npx meshify` 直接调用。
+> 注意：`npx skills` 装入的仅是 skill 文档（`SKILL.md` + `references/`）——CLI 需从克隆仓库构建（见下），或等 npm 发布后用 `npx meshify`。Claude Code 插件则额外把仓库 `bin/` 挂进会话 PATH：`meshify` 即刻可用，首次运行自动构建（每次安装/更新一次性，需 pnpm）。
 
 **已克隆仓库**（安装器构建 CLI 并复制 skill 到探测到的宿主目录）：
 
@@ -67,7 +67,7 @@ sh skills/meshify/scripts/install.sh
 
 ```bash
 pnpm install && pnpm build
-pnpm meshify --help
+pnpm meshify --help        # 或：./bin/meshify --help（插件挂到 PATH 的同一启动器）
 ```
 
 ## 快速上手
