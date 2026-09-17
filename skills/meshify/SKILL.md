@@ -31,7 +31,7 @@ that choice only affects what you read, not what you say to the user.
 |---|---|---|---|---|
 | inspect | Structure analysis (faces/materials/textures/bbox) | ✅ | ✅ (STEP) | `--json` |
 | simplify | QEM decimation (per-submesh, materials kept) | ✅ | ✅ | `--ratio 0.5`, `--target-faces`, `--min-faces` |
-| segment | Split: connected/plane/semantic | ✅ | ✅ | `--mode`, `--axis x --position 0.5`, `--cap` |
+| segment | Split: connected/plane/semantic | ✅ | ✅ | `--mode`, `--axis x --position 0.5`, `--no-cap` |
 | texture | Five UV projections + texture binding | ✅ | ✅ | `--map box`, `--image`, `--metallic/--roughness` |
 | convert | glb/gltf/obj/stl/ply interconversion | ✅ | ✅ (reads STEP) | `--to glb`, `--up-axis x\|auto` (upright models authored lying down / auto-detect) |
 | lod | Multi-level LOD chain | ✅ | ✅ | `--levels 3 --ratio 0.5` |

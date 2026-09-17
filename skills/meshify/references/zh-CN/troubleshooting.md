@@ -34,6 +34,7 @@
 | `AUTO_BOX_UV_GENERATED` | texture --map uv | 无 UV 自动盒式投影 |
 | `PARTIAL_SUCCESS` | 多子网格处理 | 部分子网格失败（exit 7 伴随） |
 | `MATERIALS_MERGED` | OBJ→GLB / simplify --merge | 等价材质/同材质子网格自动合并（坑 1 相关） |
+| `MTL_MISSING` | OBJ 读入 | 引用的 usemtl 名无定义（.mtl 缺失或其中无该名）；每个名字保留为独立的默认灰材质 |
 | `MERGE_INCOMPATIBLE_FALLBACK` | simplify --merge | 同材质子网格顶点属性不兼容无法合并，回退逐子网格（几何/材质不受影响） |
 | `INDEX_OUT_OF_RANGE` | OBJ 读入 | 面引用越界（不存在的顶点/UV/法线索引），越界分量按默认值兜底 |
 | `SMALL_PARTS_DROPPED` | segment connected | 碎片部件丢弃（全丢时保留最大者） |

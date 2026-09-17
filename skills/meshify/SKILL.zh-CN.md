@@ -21,7 +21,7 @@
 |---|---|---|---|---|
 | inspect | 结构分析（面数/材质/贴图/包围盒） | ✅ | ✅（STEP） | `--json` |
 | simplify | QEM 减面（逐子网格保材质） | ✅ | ✅ | `--ratio 0.5`、`--target-faces`、`--min-faces` |
-| segment | 拆件：connected/plane/semantic | ✅ | ✅ | `--mode`、`--axis x --position 0.5`、`--cap` |
+| segment | 拆件：connected/plane/semantic | ✅ | ✅ | `--mode`、`--axis x --position 0.5`、`--no-cap` |
 | texture | 五投影 UV + 贴图绑定 | ✅ | ✅ | `--map box`、`--image`、`--metallic/--roughness` |
 | convert | glb/gltf/obj/stl/ply 互转 | ✅ | ✅（STEP 读入） | `--to glb`、`--up-axis x\|auto`（STEP 躺着建模时扶正/自动判定） |
 | lod | 多级 LOD链 | ✅ | ✅ | `--levels 3 --ratio 0.5` |

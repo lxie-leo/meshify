@@ -34,6 +34,7 @@
 | `AUTO_BOX_UV_GENERATED` | texture --map uv | No UVs present, box projection generated automatically |
 | `PARTIAL_SUCCESS` | multi-submesh processing | Some submeshes failed ( accompanies exit 7) |
 | `MATERIALS_MERGED` | OBJ→GLB / simplify --merge | Equivalent materials / same-material submeshes merged automatically (related to pitfall 1) |
+| `MTL_MISSING` | OBJ input | Referenced usemtl name(s) have no definition (missing .mtl or name absent from it); each name is kept as a distinct default gray material |
 | `MERGE_INCOMPATIBLE_FALLBACK` | simplify --merge | Same-material submeshes have incompatible vertex attributes and cannot merge; fell back to per-submesh (geometry/materials unaffected) |
 | `INDEX_OUT_OF_RANGE` | OBJ input | Face references an out-of-range index (nonexistent vertex/UV/normal); out-of-range components filled with defaults |
 | `SMALL_PARTS_DROPPED` | segment connected | Fragment parts dropped (if all would drop, the largest is kept) |

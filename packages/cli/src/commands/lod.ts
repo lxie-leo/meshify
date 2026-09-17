@@ -75,7 +75,7 @@ export function registerLod(program: Command): void {
 		const lodSummaries: LodLevelSummary[] = [];
 		const files: ReturnType<typeof fileEntryOf>[] = [];
 		for (const level of result.levels) {
-			const p = om.claim(om.file(`lod${level.level}`, 'glb'));
+			const p = om.claim(om.lodFile(level.level, 'glb'));
 			om.ensureDirFor(p);
 			await writeDocument(level.document, p);
 			lodSummaries.push({

@@ -88,6 +88,20 @@ def simplify_file(
         new_vertices, new_faces, _face_colors = simplifier.getMesh()
         new_faces = np.asarray(new_faces, dtype=np.uint32)
 
+        # UV 接缝地板披露（与 Tier0 simplify.ts 同口径）：带贴图子网格请求目标远未达成
+        # （实际 > 目标 × 1.2）时说明接缝锁定边界顶住了坍缩——结构性下限，非误差界停止。
+        # pyfqmr 带属性坍缩时该地板真实生效（Tier0 事后重投影 UV 基本不触发），必须披露
+        if has_texture and len(new_faces) > max(1, int(tgt * 1.2)):
+            warnings.append(
+                warn(
+                    "UV_SEAM_DECIMATION_LIMITED",
+                    f"{name}: decimation stopped above the requested target ({len(new_faces)} > {tgt} faces): "
+                    "UV island seams act as locked borders that block further collapse "
+                    "(structural floor, not an error-bound stop); simplify before texturing to reach lower face counts",
+                    mesh=name,
+                )
+            )
+
         new_mesh = _rebuild_mesh(np.asarray(new_vertices), new_faces, merge=not has_texture)
         new_visual = mu.material_visual_from(geo, target_vertices=new_mesh.vertices)
         if new_visual is None:

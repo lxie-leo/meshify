@@ -34,6 +34,8 @@ export const WARNING_CODES = [
 	'PARTIAL_SUCCESS',
 	/** OBJ→GLB 时检测到多个等价材质，已自动合并 */
 	'MATERIALS_MERGED',
+	/** OBJ 引用的 usemtl 名无定义（.mtl 缺失或其中无该名），已按名保留为独立默认灰材质 */
+	'MTL_MISSING',
 	/** --merge 请求的合并因子网格属性不兼容未能执行，已回退逐子网格处理（几何/材质不受影响） */
 	'MERGE_INCOMPATIBLE_FALLBACK',
 	/** OBJ 面引用了不存在的顶点/UV/法线索引，越界分量已按默认值兜底 */

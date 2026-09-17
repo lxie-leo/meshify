@@ -25,6 +25,8 @@ extension must match `--to` (otherwise exit 4; this prevents STL bytes landing i
 ## Fidelity and disclosure
 
 - Zero material loss is a hard constraint (pitfall 1); merging equivalent materials on OBJ→GLB writes `MATERIALS_MERGED`
+- OBJ with an unresolvable `.mtl` (or names absent from it): each referenced usemtl name is kept as a
+  distinct default gray material and `MTL_MISSING` is written (names survive; colors/textures do not)
 - STL/PLY have no material semantics: converting them to GLB yields geometry only (use the texture command for textures)
 - Animation/skinning is structurally preserved on the Tier0 route; `--tier py` drops it (trimesh
   pipeline; the routing layer intercepts this beforehand)

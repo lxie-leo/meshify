@@ -52,6 +52,20 @@ export class OutputManager {
 		return path.join(this.baseDir, `${this.inputName}.${op}.${ext}`);
 	}
 
+	/**
+	 * 多级产物路径（LOD 链）：默认布局 `<name>.lod<i>.<ext>` 逐级独立；
+	 * `-o` 指定 lod0 本身，其余级在 -o 同目录派生 `<stem>.lod<i>.<ext>`。
+	 * （多级命令不能走 file()：explicit 下 file() 忽略层级名返回同一路径，
+	 * 逐级写入会互相覆盖只剩最后一级。）
+	 */
+	lodFile(level: number, ext = 'glb'): string {
+		if (!this.explicit) return path.join(this.baseDir, `${this.inputName}.lod${level}.${ext}`);
+		if (level === 0) return this.explicit;
+		const ext0 = path.extname(this.explicit) || `.${ext}`;
+		const stem = path.basename(this.explicit, ext0);
+		return path.join(path.dirname(this.explicit), `${stem}.lod${level}${ext0}`);
+	}
+
 	/** 多部件输出目录（segment）：`<base>/<name>.<op>/`（-o 覆盖）。 */
 	partDir(op: string): string {
 		if (this.explicit) return this.explicit;

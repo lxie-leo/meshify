@@ -188,7 +188,12 @@ async function simplifyPrimitiveFaces(
 		.setArray(best.indices);
 	const buffer = prim.getIndices()?.getBuffer();
 	if (buffer) acc.setBuffer(buffer);
+	const oldAcc = prim.getIndices();
 	prim.setIndices(acc);
+	// 换索引后旧 accessor 若已无使用者（listParents 仅剩根）须立即回收，
+	// 否则序列化出僵尸索引（实测 5120 面模型减面后产物仍带 15360 索引死数据）。
+	// 共享 accessor 不能回收：dispose 是全文档摘除，会连坐其他 primitive
+	if (oldAcc && oldAcc.listParents().length <= 1) oldAcc.dispose();
 	compactPrimitive(prim);
 	return { facesAfter: best.indices.length / 3, error: best.error };
 }
