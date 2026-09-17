@@ -93,7 +93,7 @@ def run_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
 
             warnings.extend(result.pop("warnings", []))
             # STEP 几何产物统一做了朝上轴规范化（glTF 规范 Y-up，CAD 原生 Z-up）——
-            # 朝向变化对所有走 groups_to_scene 的命令生效，在此集中披露（inspect 无产物不披露）。
+            # 朝向变化对所有走 groups_to_scene 的命令生效，警告统一在这里写（inspect 没有产物，不写）。
             # STEP 不携带「部件哪个方向朝上」：Z-up 只是 CAD 惯例缺省；部件在源文件里
             # 躺着建模时（装配坐标系），需要 --up-axis 显式指定；auto = 几何特征自动判定
             if command != "inspect" and Path(input_path).suffix.lower() in STEP_EXTS:
@@ -101,7 +101,7 @@ def run_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
                 auto_resolved = result.pop("up_axis_resolved", None)
                 auto_evidence = result.pop("up_axis_evidence", None)
                 if auto_resolved is not None:
-                    # --up-axis auto 高置信判定成功：披露判定结论与依据；实际旋转按 resolved 轴
+                    # --up-axis auto 高置信判定成功：把判定结论与依据写进警告；实际旋转按 resolved 轴
                     params["up_axis_resolved"] = auto_resolved
                     warnings.append(
                         warn(
@@ -150,7 +150,7 @@ def run_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
         except MemoryError:
             errors.append("Out of memory (Tier1)")
             exit_code = EXIT_RESOURCE_LIMIT
-        except Exception as e:  # noqa: BLE001 - 未知异常按内部错误披露完整栈
+        except Exception as e:  # noqa: BLE001 - 未知异常按内部错误处理，写明完整堆栈
             errors.append(f"Internal error: {e}\n{traceback.format_exc()}")
             exit_code = EXIT_INTERNAL
 
@@ -254,7 +254,7 @@ def _cmd_segment(input_path, params, output_path, output_dir, overwrite):
         {"index": p["index"], "path": p["path"], "vertices": p["vertices"], "faces": p["faces"]}
         for p in result["parts"]
     ]
-    # 口径：output 顶层描述 output.path（part_000）单文件，全部部件总体积在 metrics.bytes_total
+    # 约定：output 顶层描述 output.path（part_000）单文件，全部部件总体积在 metrics.bytes_total
     first = result["parts"][0]
     first_file = files[0]
     output = {
@@ -326,7 +326,7 @@ def _cmd_lod(input_path, params, output_path, output_dir, overwrite):
         overwrite=overwrite,
     )
     files = [_file_info(p["path"], "lod") for p in result["parts"]]
-    # 口径：output 顶层描述 output.path（part_000/lod0）单文件，整链总体积在 metrics.bytes_total
+    # 约定：output 顶层描述 output.path（part_000/lod0）单文件，整链总体积在 metrics.bytes_total
     first = result["lod_levels"][0]
     output = {
         "path": first["path"],

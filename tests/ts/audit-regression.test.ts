@@ -1,8 +1,8 @@
 /**
  * 2026-09-03 对抗审计回归（10 项缺陷固化；修复前行为见各用例注释）。
  * 覆盖：损坏输入归一 exit 2（双内核）、大小写同文件、convert 扩展名/伴生文件、
- * py texture 无 --image、空场景统一 exit 6、STEP 全命令、merge 回退披露、
- * OBJ 越界披露、fixtures PNG 编码器（RGBA 步长）。
+ * py texture 无 --image、空场景统一 exit 6、STEP 全命令、merge 回退写警告、
+ * OBJ 越界写警告、fixtures PNG 编码器（RGBA 步长）。
  */
 
 import { describe, it, expect } from 'vitest';
@@ -73,7 +73,7 @@ describe('审计回归：convert 输出协议', () => {
 		const r = cli(['convert', FIX('glb/dense.glb'), '--to', 'stl', '-o', path.join(dir, 'bad.glb'), '--json']);
 		expect(r.code).toBe(4);
 		expect(r.stderr).toMatch(/extension .* does not match/);
-		// 拒绝先于写入：产物绝不出盘（失败 report 是工具自有日志，允许落盘）
+		// 先拒绝、后写文件：产物绝不出现在目录里（失败 report 是工具自己的日志文件，允许写）
 		expect(fs.readdirSync(dir).filter((f) => !f.endsWith('.report.json'))).toEqual([]);
 		expect(fs.existsSync(path.join(dir, 'bad.glb'))).toBe(false);
 	});
@@ -238,7 +238,7 @@ describe('审计回归：STEP 全命令走 Tier1', () => {
 });
 
 // ------------------------------------------------------------------
-// 审计 #9（部分）：kernel-ts 披露类缺陷（函数级）
+// 审计 #9（部分）：kernel-ts 该写警告没写警告的缺陷（函数级）
 // ------------------------------------------------------------------
 describe('审计回归：kernel-ts 披露', () => {
 	it('simplify --merge：同材质子网格顶点属性不兼容 → MERGE_INCOMPATIBLE_FALLBACK，几何保留（曾静默回退无披露）', async () => {

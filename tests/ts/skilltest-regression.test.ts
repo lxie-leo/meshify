@@ -1,7 +1,7 @@
 /**
  * 2026-09-17 skill 全量测试回归（4 项缺陷固化；修复前行为见各用例注释）。
  * 覆盖：lod -o 多级互相覆盖（只剩最后一级）、simplify 僵尸索引 accessor、
- * OBJ 缺 mtl 材质静默并入首名、Tier1 UV 接缝地板不披露。
+ * OBJ 缺 mtl 材质静默并入首名、Tier1 UV 接缝面数下限不写警告。
  */
 
 import { describe, it, expect } from 'vitest';
@@ -76,7 +76,7 @@ describe('skilltest 回归：simplify 产物无僵尸索引 accessor', () => {
 });
 
 // ------------------------------------------------------------------
-// #3：OBJ 缺 mtl（曾：所有 usemtl 名静默并入首名材质，零披露）
+// #3：OBJ 缺 mtl（曾：所有 usemtl 名静默并入首名材质，零警告）
 // ------------------------------------------------------------------
 describe('skilltest 回归：OBJ 缺 mtl 按名保材质并披露', () => {
 	it('objToDocument 无 mtl → 每名独立材质 + MTL_MISSING；有 mtl → 不误报', async () => {
@@ -114,7 +114,7 @@ describe('skilltest 回归：OBJ 缺 mtl 按名保材质并披露', () => {
 });
 
 // ------------------------------------------------------------------
-// #4：Tier1 UV 接缝地板披露（曾：请求 102 实得 476，零警告）
+// #4：Tier1 UV 接缝面数下限要写警告（曾：请求 102 实得 476，零警告）
 // ------------------------------------------------------------------
 describe('skilltest 回归：Tier1 UV 接缝地板披露', () => {
 	/** 最小纯色 PNG（8bit RGB，无依赖手写编码）。 */
@@ -155,7 +155,7 @@ describe('skilltest 回归：Tier1 UV 接缝地板披露', () => {
 			const r = cli(['simplify', textured, '--ratio', '0.02', '--tier', 'py', '-o', out, '--json']);
 			expect(r.code).toBe(0);
 			expect(r.manifest?.warnings?.map((w: any) => w.code)).toContain('UV_SEAM_DECIMATION_LIMITED');
-			// 地板为真：实际面数显著高于请求目标（5120×0.02≈102）
+			// 下限为真：实际面数显著高于请求目标（5120×0.02≈102）
 			expect(r.manifest?.output?.faces).toBeGreaterThan(120);
 
 			// 对照：未分岛的原始 dense 深减面不误报（无贴图接缝可顶）

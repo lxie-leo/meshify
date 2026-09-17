@@ -44,9 +44,9 @@ export interface TierRoute {
  * Tier 判定统一入口（plan §Step 1.2 两条硬规则在此落地）：
  * 1. 输入含 skin/蒙皮/动画/morph → 自动降回 Tier0 + SKIN_ANIMATION_PRESERVED
  * 2. Tier1 需要但未就绪：无 TS 回退（STEP）→ exit 5 + 安装指引；
- *    有回退 → 降级 Tier0 + TIER_DOWNGRADED（绝不信默降级）
+ *    有回退 → 降级 Tier0 + TIER_DOWNGRADED（绝不悄悄降级）
  *
- * doctor 探测缓存（24h）复用；未命中才现场探测。
+ * doctor 的探测结果缓存 24 小时，优先复用；没有缓存才现场探测。
  */
 export async function routeTier(
 	command: string,

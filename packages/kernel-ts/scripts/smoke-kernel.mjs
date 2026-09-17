@@ -124,7 +124,7 @@ const planeOut = path.join(tmp, 'smoke.plane.glb');
 await read.write(planeOut, planeDoc);
 console.log('   plane GLB:', fs.statSync(planeOut).size, 'bytes');
 
-// segment plane B：多材质重叠模型（坑 1：按源 primitive 分组保留；重合壳显式披露不封口）
+// segment plane B：多材质重叠模型（坑 1：按源 primitive 分组保留；重合壳显式写警告、不封口）
 const soup = k.buildSoup(k.collectPrimitives(d2));
 const cut2 = k.cutSoupByPlane(soup, { origin: [0, 0, 0], normal: [1, 0, 0] }, { cap: true });
 console.log('4b) segment-plane 多材质: parts=', cut2.parts.map((p) => `${p.name}:${p.triangleCount}tris/groups${p.groups.length}`), 'capped=', cut2.capped, 'warn:', cut2.warnings.map((w) => w.code));

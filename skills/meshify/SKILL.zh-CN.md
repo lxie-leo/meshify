@@ -72,7 +72,7 @@ meshify segment model.glb --mode connected --min-faces 50 --preview-html
 meshify segment model.glb --mode plane --axis x --position 0 --preview-html
 meshify segment model.glb --mode plane --origin "0,10,0" --normal "0,1,0"
 
-# 贴图（盒式投影，无 UV 时自动生成并警告披露）。
+# 贴图（盒式投影，无 UV 时自动生成并写警告）。
 # 顺序铁律：先减面后贴图——投影会把 UV 岛接缝烤进网格，接缝等效锁定边界，
 # 会封死之后任何深度减面（UV_SEAM_DECIMATION_LIMITED）。先 simplify、再 texture、最后 convert/压缩。
 meshify texture model.glb --map box --image diffuse.png --metallic 0.1 --preview-html
@@ -148,7 +148,7 @@ meshify doctor
 1. 输入含**动画/蒙皮/morph** → 强制 Tier0（trimesh 管线会丢动画），写 `SKIN_ANIMATION_PRESERVED`
 2. 输入是 **STEP** → 强制 Tier1；未装 → exit 5 + 安装指引（无 TS 回退，不降级）
 3. 其余默认 Tier0；`--tier py` 显式要求时走 Tier1，Tier1 不可用则 exit 5
-4. `optimize` 的 meshopt/draco/WebP 压缩是 Tier0 专属——`--tier py` 下输出未压缩基线并写 `TIER_DOWNGRADED` 披露
+4. `optimize` 的 meshopt/draco/WebP 压缩是 Tier0 专属——`--tier py` 下输出未压缩基线并写 `TIER_DOWNGRADED` 警告
 
 详见 references/zh-CN/tiering.md。
 

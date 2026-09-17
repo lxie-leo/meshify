@@ -1,5 +1,5 @@
 /**
- * 并查集（移植自 maestro 前端 useThreeScene.ts:1100-1196 的连通分量实现语义）。
+ * 并查集：连通域分割、同标签切分这类图算法共用的底层工具。
  * 路径压缩 + 按秩合并，近线性。
  */
 export class UnionFind {
@@ -61,7 +61,8 @@ export class UnionFind {
 	}
 }
 
-/** 位置量化焊接键（绝对容差 1e-6，与 maestro 前端 QUANT=1e6 对齐：STEP 跨色子网格顶点精确重合可焊上）。 */
+/** 位置量化焊接键：坐标乘 1e6 取整（相当于 1e-6 的容差）。STEP 按颜色拆出
+ *  的子网格顶点位置一模一样却各算各的，量化后得到同一个键，就能焊上。 */
 export function weldKey(x: number, y: number, z: number): string {
 	return `${Math.round(x * 1e6)},${Math.round(y * 1e6)},${Math.round(z * 1e6)}`;
 }

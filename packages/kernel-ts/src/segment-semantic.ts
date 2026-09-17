@@ -7,15 +7,16 @@ import { UnionFind, weldKey } from './geometry/union-find.js';
 /**
  * 语义分割（Tier0）：法线 + 空间位置联合聚类 → 同标签连通切分 → 小碎块合并。
  *
- * 忠实移植 maestro model_edit_segment.py:segment_semantic：
+ * 算法要点：
  * - 聚类特征 = [面法线, 归一化面心]（逐实体各自归一化，零长轴 1e-12 兜底）
  * - 大网格采样训练（clusters*100），标签对全量预测；固定种子可复现
  * - 自适应最小部件面数 = max(10, 2% × 实体面数)
  * - 同标签连通切分后逐轮合并：目标取共享边最多的相邻部件（平手取面数更大者），
- *   悬空碎屑并入质心最近的「已达标注件」；保证部件完整一块、拆分无面丢失
+ *   孤立碎块并入质心最近的「已成形的部件」；保证部件完整一块、拆分无面丢失
  * - 部件预览色按黄金角取互斥色相（hsv(h, 0.62, 0.92)）
  *
- * 跨子网格焊接与 maestro _load_solids 语义一致（QUANT=1e6）。
+ * 跨子网格焊接和连通域分割用同一套规则：位置量化到 1e-6 的精度，
+ * 位置重合的顶点就算同一个。
  */
 
 export interface SemanticSegmentResult {
@@ -63,7 +64,8 @@ export function segmentSemantic(
 		}
 	}
 
-	// ---- 2. 实体级连通分量（语义聚类逐实体进行，与 maestro 逐 solid 一致）----
+	// ---- 2. 实体级连通分量：特征按实体各自归一化，聚类也逐实体做；
+	// 互不相连的实体不会因为「长得像」被并成同一个部件 ----
 	const solidUf = new UnionFind(nFaces);
 	for (const [a, b] of adjPairs) solidUf.union(a, b);
 	const solid = solidUf.compact();
@@ -120,7 +122,8 @@ export function segmentSemantic(
 			sampleLimit: clusters * 100,
 		});
 
-		// 同标签连通切分 + 小碎块合并（对齐 maestro _connected_parts）
+		// 同标签连通切分 + 小碎块合并：同标签的面不一定挨在一起，
+		// 太小的碎块并给邻居，免得一个标签碎成一堆小文件
 		const minFaceCount = Math.max(10, Math.floor(faces.length * 0.02));
 		const localIdx = new Map<number, number>();
 		for (let i = 0; i < faces.length; i++) localIdx.set(faces[i], i);
@@ -156,8 +159,10 @@ export function segmentSemantic(
 }
 
 /**
- * 同标签连通切分 + 逐轮小碎块合并（移植 maestro model_edit_segment.py:_connected_parts）。
- * 输入为实体内局部面号；返回合并后的局部面号分组。
+ * 同标签连通切分 + 小碎块合并：反复合并，直到没有小于 minFaceCount 的部件。
+ * 碎块优先并给共享边最多的邻居，并列时并给面数更大的那个；一个邻居都
+ * 没有的孤块，并给质心离它最近的正常部件（免得孤块互相并成长链）。
+ * 输入是实体内的局部面号，返回合并后的分组。
  */
 function connectedPartsWithMerge(
 	nFaces: number,
@@ -244,7 +249,7 @@ function connectedPartsWithMerge(
 			else fallback.push(c);
 		}
 
-		// 悬空碎屑并入质心最近的「已达标注件」（避免碎屑互并成长链）
+		// 孤立碎块并入质心最近的「已成形的部件」（免得碎块互相并成长链）
 		if (fallback.length > 0) {
 			const stable = aliveIds.filter((c) => !merges.has(c) && sizes[c] >= minFaceCount);
 			const cand = stable.length > 0
@@ -298,7 +303,8 @@ function connectedPartsWithMerge(
 	return [...grouped.values()];
 }
 
-/** 黄金角互斥色相的部件预览色（对齐 maestro _part_color：hsv(h, 0.62, 0.92)）。 */
+/** 部件预览色：色相按黄金角递增，相邻编号的颜色差别最大，不用色表也能
+ *  分清各个部件（hsv(h, 0.62, 0.92)）。 */
 export function goldenAngleColor(index: number): [number, number, number] {
 	const h = (index * 0.6180339887498949) % 1;
 	const s = 0.62;

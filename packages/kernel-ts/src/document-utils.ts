@@ -10,7 +10,8 @@ import { transformDirection, transformPoint } from './geometry/mat4.js';
  * 核心抽象：
  * - PrimitiveInfo：单个 primitive 的世界系烘焙几何（segment/texture 分析用）
  *   + 本地系几何（写回用，保留节点变换 → 动画/蒙皮不受破坏）
- * - Soup：全文档三角面汤（跨子网格焊接/切割/聚类用，对齐 maestro _load_solids）
+ * - Soup：整个文档摊平成一份三角形列表（顶点统一重新编号），跨子网格的
+ *   焊接/切割/聚类都在它上面做
  * - buildPartDocument：从三角子集构建独立 GLB（材质经 copyToDocument 深拷贝，坑 1 天然免疫）
  */
 
@@ -103,7 +104,7 @@ function walk(node: Node, doc: Document, out: PrimitiveInfo[]): void {
 	for (const child of node.listChildren()) walk(child, doc, out);
 }
 
-/** 全局三角面汤。 */
+/** 全文档摊平后的三角形列表（顶点统一重新编号）。 */
 export interface Soup {
 	prims: PrimitiveInfo[];
 	positions: Float32Array;

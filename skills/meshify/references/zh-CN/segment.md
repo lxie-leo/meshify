@@ -41,7 +41,7 @@ meshify segment model.glb --mode semantic [--clusters 8]
 ## 产物
 
 - Tier0：单 GLB `<输入名>.segment-<mode>.glb`（每部件一个节点；semantic 附黄金角部件着色）
-- Tier1：目录 `<输入名>.segment-<mode>/part_000.glb …`（manifest.parts 逐件披露路径/面数）
+- Tier1：目录 `<输入名>.segment-<mode>/part_000.glb …`（manifest.parts 逐件列出路径/面数）
 
 ## 报告要点
 
@@ -52,7 +52,7 @@ meshify segment model.glb --mode semantic [--clusters 8]
 }
 ```
 
-## 防护（内嵌的 maestro 实坑）
+## 防护（内嵌的实测实坑）
 
 | 坑 | 默认行为 | 警告码 |
 |---|---|---|

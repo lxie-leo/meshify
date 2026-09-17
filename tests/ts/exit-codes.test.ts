@@ -16,7 +16,7 @@ describe('退出码 2：输入不可读', () => {
 		const r = cli(['inspect', 'no/such/file.glb', '--json']);
 		expect(r.code).toBe(2);
 		expect(r.stderr).toMatch(/missing or unreadable|ENOENT/);
-		// 早失败也产出最小 manifest：Agent 不必拿退出码猜原因（failed_early 披露）
+		// 早失败也产出最小 manifest：Agent 不必拿退出码猜原因（failed_early 已写明）
 		expect(r.manifest).not.toBeNull();
 		expect(r.manifest?.exit_code).toBe(2);
 		expect((r.manifest?.errors ?? []).join(' ')).toMatch(/missing or unreadable|ENOENT/);

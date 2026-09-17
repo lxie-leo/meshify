@@ -1,11 +1,14 @@
-"""QEM 简化（迁移自 maestro model_edit_simplify.py，pyfqmr）。
+"""QEM 简化（pyfqmr，逐子网格做）。
 
-防闪烁/防残缺策略与警告披露：
-- preserve_border/preserve_topology（maestro 实证参数）
-- 贴图网格不按位置焊接（接缝双顶点防拉花）
-- 几何重建后 UV 最近邻重映射保纹理；无法重映射降级 baseColor 标量并披露
-- < min_faces 子网格跳过简化（SMALL_MESH_SKIPPED，坑 12）
-- 产物材质 doubleSided（开口壳防背面剔除，坑 3）
+减面会重算一套顶点，贴图和开口壳最容易受伤，防护如下：
+- preserve_border 和 preserve_topology 全开：不动开放边界、不改拓扑，
+  实测这样最稳，不出破面、不闪烁
+- 带贴图的网格不做顶点焊接：UV 接缝处本来就是两个重合的顶点、u 值不同，
+  一焊接贴图就花了
+- 减面后用最近邻把旧 UV 对到新顶点上（UV_REMAP_APPROXIMATED）；对不上
+  就把材质降成纯色并写警告（MATERIAL_DEGRADED_TO_BASE_COLOR）
+- 面数小于 min_faces 的子网格跳过不减（SMALL_MESH_SKIPPED，坑 12）
+- 输出材质强制 doubleSided：开口壳被减面切穿后，单面渲染会从背面看到洞（坑 3）
 """
 
 from __future__ import annotations
@@ -88,9 +91,10 @@ def simplify_file(
         new_vertices, new_faces, _face_colors = simplifier.getMesh()
         new_faces = np.asarray(new_faces, dtype=np.uint32)
 
-        # UV 接缝地板披露（与 Tier0 simplify.ts 同口径）：带贴图子网格请求目标远未达成
-        # （实际 > 目标 × 1.2）时说明接缝锁定边界顶住了坍缩——结构性下限，非误差界停止。
-        # pyfqmr 带属性坍缩时该地板真实生效（Tier0 事后重投影 UV 基本不触发），必须披露
+        # UV 接缝造成的面数下限（与 Tier0 simplify.ts 同一规则）：带贴图子网格的实际
+        # 面数远超请求目标（> 目标 × 1.2）时，是接缝像锁定边界一样顶住了坍缩——
+        # 结构性下限，不是误差限制提前停；pyfqmr 会真实触发（Tier0 事后重投影
+        # UV，基本不触发），必须写警告
         if has_texture and len(new_faces) > max(1, int(tgt * 1.2)):
             warnings.append(
                 warn(

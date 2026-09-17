@@ -114,10 +114,10 @@ meshify convert part.step --to glb
 | `inspect` | 只读分析（顶点/面数/子网格/材质/贴图/bbox） | manifest 即输出，无产物文件 |
 | `simplify` | QEM 减面（`--ratio` 保留率 \| `--target-faces` 目标面数，二选一） | 小网格 <200 面跳过 + `SMALL_MESH_SKIPPED` |
 | `segment` | 拆件：`--mode plane\|connected\|semantic` | 平面切割默认封口保水密 |
-| `texture` | 贴图 / UV 重投影（planar/cylindrical/spherical/box/uv） | 缺 UV 子网格自动补盒式 + 警告披露 |
-| `convert` | 格式互转（glb/gltf/obj/stl/ply；STEP 读入走 Tier1） | 材质/纹理跨格式尽量保留，丢失即披露；空场景产出合法空文件 + 警告 |
+| `texture` | 贴图 / UV 重投影（planar/cylindrical/spherical/box/uv） | 缺 UV 子网格自动补盒式 + 写警告 |
+| `convert` | 格式互转（glb/gltf/obj/stl/ply；STEP 读入走 Tier1） | 材质/纹理跨格式尽量保留，丢失即写警告；空场景产出合法空文件 + 警告 |
 | `lod` | 多级细节链（`--levels --ratio`） | level0 原样，逐级单调下降 |
-| `optimize` | 一站式轻量化（减面 + meshopt/draco + 贴图压缩/降采样） | 依赖不可用时降级并披露，不失败 |
+| `optimize` | 一站式轻量化（减面 + meshopt/draco + 贴图压缩/降采样） | 依赖不可用时降级并写警告，不失败 |
 | `doctor` | 环境自检（Tier0/Tier1 就绪性、uv 安装指引） | `--json` 输出机器可读结果 |
 
 ## Agent 协议

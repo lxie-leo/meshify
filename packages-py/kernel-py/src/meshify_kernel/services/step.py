@@ -1,11 +1,12 @@
-"""STEP/STP CAD 读取（迁移自 maestro model_edit_step.py）。
+"""STEP/STP CAD 读取（只有 Tier1 能做，Tier0 没有 CAD 解析器）。
 
-gmsh 内置 OpenCASCADE 内核读取 B-rep → 二维曲面三角化 → 按颜色分组
-（styled_item AP203/AP214）→ 每组独立 PBR 子网格。无颜色回退浅灰哑光。
+流程：gmsh 内置的 OpenCASCADE 内核读 B-rep → 曲面三角化 → 按颜色分组
+（读 styled_item，AP203/AP214）→ 每组做成一个带 PBR 材质的子网格。
+没给颜色的面用浅灰哑光，没上色的实体看起来也正常。
 
-meshify 改动：
-- inspect_step：网格化后仅统计，不落盘（inspect 语义）
-- mesh_step_groups：供 convert/inspect 复用的分组几何出口
+两个入口：
+- inspect_step：只统计信息，不写文件（inspect 语义）
+- mesh_step_groups：输出分组后的几何，convert/inspect 共用
 """
 
 from __future__ import annotations
@@ -349,7 +350,7 @@ def groups_to_scene(groups, up_axis: str = "z") -> "object":
     STEP 坐标默认按 CAD 惯例视为 Z-up，glTF 规范要求 Y-up——旋转到 Y-up
     （det=+1 纯旋转保定向；几何形状不变）。up_axis 指定源文件中部件的实际
     朝上轴（x|y|z，可加 - 前缀），部件在装配坐标系里非 Z 朝上建模时用。
-    朝向变化由 runner 集中披露（UP_AXIS_NORMALIZED）。
+    朝向变化由 runner 统一写警告（UP_AXIS_NORMALIZED）。
     """
     import trimesh
 
@@ -382,7 +383,7 @@ def step_to_glb(step_path: str, out_path: str, resolution: int = 100, up_axis: s
 
 
 def inspect_step(step_path: str, resolution: int = 100) -> Dict[str, object]:
-    """STEP 输入侧统计（inspect 语义：不落盘产物）。"""
+    """STEP 输入侧统计（inspect 语义：不写产物文件）。"""
     groups, bbox = mesh_step_groups(step_path, resolution)
     if not groups:
         raise ValueError("STEP file produced no triangles; the file may contain no solid geometry or be corrupt")

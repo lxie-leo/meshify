@@ -126,7 +126,8 @@ function pickCdn() {
   return tryNext();
 }
 
-// ---- maestro 坑 11 常量：贴图亮度 → 环境光强度分段映射 ----
+// ---- 坑 11 常量：按贴图亮度调环境光——贴图暗就多补光，贴图亮就压低
+// 防过曝，亮度 0.5 是分段拐点 ----
 var TEXTURED_ENV_BASE = 0.65;
 var ENV_MIN = 0.3;
 var ENV_MAX = 0.85;

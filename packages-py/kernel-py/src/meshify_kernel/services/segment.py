@@ -1,14 +1,17 @@
-"""三模式分割（迁移自 maestro model_edit_segment.py）。
+"""三模式分割：connected / plane / semantic。三种模式都先把子网格焊接成
+「实体」（连成一片的整体），再逐实体处理。
 
-- connected：跨子网格焊接后的连通域拆件（实体级）
-- plane：平面切割（earcut 封口保水密，坑 5；碎片面保留，坑 6）
-- semantic：法线+位置 KMeans 聚类 + 同标签连通切分 + 碎块合并
+- connected：每个实体就是一个部件。CAD 导出时常按颜色拆子网格，一个零件
+  被拆成好几块（几何挨着但顶点不共享），焊回去才是真正的零件
+- plane：沿平面把模型切成两半。平面有两种给法：axis+position（position ∈
+  [-1,1]，映射到包围盒两端，适合拖滑块）或 origin+normal（直接给坐标，
+  CLI 负责检查两组只给一组）；切口默认用 earcut 封上保持水密（坑 5），
+  封口产生的零面积小三角形保留不删（坑 6）
+- semantic：按「面朝哪 + 在哪」聚类，同一标签中连通的面切成一块，太小的
+  碎块并回去。它分的是区域，不认识零件
 
-meshify 改动：
-- 平面定义支持 axis+position（[-1,1] 线性映射包围盒，maestro 滑块语义）
-  与 origin/normal（原生坐标）双入口（CLI 已做互斥校验）
-- 部件写 output_dir/part_%03d.glb；未预声明的部件文件同样遵守 overwrite 约定
-- 警告按协议码写入 manifest
+输出：部件依次写 output_dir/part_000.glb、part_001.glb……同样遵守
+overwrite 约定；警告按协议码写入 manifest。
 """
 
 from __future__ import annotations
@@ -137,7 +140,7 @@ def _majority_source(face_ids, global_ids, face_src, src_meshes):
 
 
 def _build_part(solid, face_ids, global_ids, face_src, src_meshes, warnings):
-    """从实体面索引构建部件；材质降级时写披露警告（meshify 增）。"""
+    """按面索引从实体里切出部件；材质被迫降级时写警告告知。"""
     import trimesh
 
     part_src = face_src[global_ids[face_ids]]
@@ -326,7 +329,8 @@ def _segment_connected(file_path: str, min_faces: int) -> Tuple[List[Any], List[
 
 
 # ------------------------------------------------------------------
-# semantic 连通切分 + 碎块合并（maestro 原样迁移）
+# semantic 的连通切分 + 碎块合并：同一标签的面不一定挨在一起，先按
+# 「同标签且连通」切块，再把太小的碎块并给邻居，免得一个标签碎成一堆小文件
 # ------------------------------------------------------------------
 
 

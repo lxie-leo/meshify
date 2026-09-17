@@ -57,7 +57,7 @@ export async function loadInput(inputPath: string, format: InputFormat): Promise
 	let doc: Document;
 
 	// 解析/解码失败 = 输入不可读（exit 2），不是内部错误：
-	// 截断 GLB、垃圾 OBJ、空 PLY、引用缺失 .bin 的 .gltf 都归此类（与 Tier1 口径一致）
+	// 截断 GLB、垃圾 OBJ、空 PLY、引用缺失 .bin 的 .gltf 都归此类（与 Tier1 规则一致）
 	try {
 		switch (format) {
 			case 'glb':
@@ -70,10 +70,10 @@ export async function loadInput(inputPath: string, format: InputFormat): Promise
 				const images = loadMtlImages(mtl, path.dirname(inputPath));
 				const obj = objToDocument(text, mtl, images);
 				doc = obj.doc;
-				warnings.push(...obj.warnings); // 越界索引 / 材质合并等披露不能在加载层丢弃
+				warnings.push(...obj.warnings); // 越界索引 / 材质合并等警告不能在加载层丢弃
 				warnings.push(...mtlWarnings);
 				// 扩展名路由优先：二进制内容冒充 .obj（如 STL 改名）会解析出 0 顶点——
-				// 静默空结果对 Agent 是坑，显式披露让上游有机会检查文件真实格式
+				// 悄悄给个空结果对 Agent 是坑，写出警告让上游有机会检查文件真实格式
 				if (looksLikeBinaryText(text)) {
 					warnings.push(
 						warn(
@@ -118,7 +118,7 @@ export async function loadInput(inputPath: string, format: InputFormat): Promise
 /**
  * 几何命令（simplify/segment/texture/lod/optimize）前置：
  * 输入 0 面 → exit 6，任何产物写盘前失败（inspect/convert 是结构操作，不拦；
- * 与 Tier1 runner 的集中拦截同口径）。
+ * 与 Tier1 runner 的集中拦截规则一致）。
  */
 export function assertProcessableGeometry(inputInfo: InputInfo, command: string): void {
 	if (inputInfo.faces > 0) return;
@@ -258,7 +258,7 @@ export function parseTierPref(raw: unknown): 'auto' | 'ts' | 'py' {
 }
 
 // ---------------------------------------------------------------------------
-// 失败也产出 manifest（早失败路径的结构化错误披露）
+// 失败也产出 manifest（早失败路径也要给出结构化的错误信息）
 // ---------------------------------------------------------------------------
 
 type ModelCommandAction = (input: string, opts: GlobalOptions & Record<string, unknown>) => Promise<void>;

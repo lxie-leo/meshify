@@ -91,7 +91,7 @@ def convert_file(
 
 def _export(scene, output_path: str, to: str) -> None:
     # 空场景：trimesh 拒绝导出空 Scene（"Can't export empty scenes!"），但
-    # convert 是结构操作——空输入应产出同格式的合法空文件（与 Tier0 同口径）
+    # convert 是结构操作——空输入应产出同格式的合法空文件（与 Tier0 规则一致）
     import trimesh
 
     has_faces = any(len(getattr(g, "faces", [])) > 0 for g in getattr(scene, "geometry", {}).values())

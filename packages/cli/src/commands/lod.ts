@@ -52,7 +52,7 @@ export function registerLod(program: Command): void {
 			min_faces: parseInteger(opts.minFaces, 'min-faces', { min: 1 }),
 		};
 
-		// Tier1 路线为多文件输出（output_dir/part_%03d.glb，manifest 内逐级披露路径）
+		// Tier1 路线为多文件输出（output_dir/part_%03d.glb，manifest 内逐级写明路径）
 		const route = await routeTier('lod', input, format, opts, { params, op: 'lod', multi: true });
 		if (route.handled) return;
 
@@ -94,7 +94,7 @@ export function registerLod(program: Command): void {
 		const totalBytes = lodSummaries.reduce((s, l) => s + l.bytes, 0);
 		const stats = await documentStats(result.levels[0].document);
 
-		// 口径：output 顶层描述 output.path（lod0）单文件——bytes/vertices/faces 均取 lod0；
+		// 约定：output 顶层描述 output.path（lod0）单文件——bytes/vertices/faces 均取 lod0；
 		// 整链交付总体积在 metrics.bytes_total（逐级权威数据在 files[] 与 lod_levels[]）
 		const output = {
 			path: main.path,

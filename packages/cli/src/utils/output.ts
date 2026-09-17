@@ -88,7 +88,7 @@ export class OutputManager {
 	/** 声明即将写入的路径：存在且未 --overwrite → exit 4；等于输入路径 → 永久拒绝。 */
 	claim(target: string): string {
 		const abs = path.resolve(target);
-		// 大小写不敏感 FS 上 -o PROOF.glb 也能命中输入 proof.glb（samePath 归一比较）
+		// 大小写不敏感的文件系统上，-o PROOF.glb 实际就是输入的 proof.glb（samePath 归一后比较）
 		if (samePath(abs, this.inputPath)) {
 			throw new MeshifyError(
 				EXIT_PARAM_CONFLICT,

@@ -16,7 +16,7 @@
 | `output` | OutputInfo \| null | inspect 为 null |
 | `params` | object | 命令参数原样回显（CLI 组装值，非用户原始字符串） |
 | `metrics` | Metrics | 削减/误差/部件/LOD/耗时 |
-| `warnings` | Warning[] | 显式降级披露（码表见 troubleshooting.md） |
+| `warnings` | Warning[] | 显式写明的降级警告（码表见 troubleshooting.md） |
 | `errors` | string[] | 非空即失败 |
 | `exit_code` | int | 与进程退出码一致 |
 
@@ -43,9 +43,9 @@
 | 字段 | 出现于 | 说明 |
 |---|---|---|
 | `duration_ms` | 全部 | 耗时（必有） |
-| `face_reduction` | 产出面数的命令 | 1 - out_faces/in_faces（数学口径，**可为负**：产物面数多于输入时，如空输入 0 面转出几何、或封口/合并引入新面；判定削减与否看符号而非数值大小） |
+| `face_reduction` | 产出面数的命令 | 1 - out_faces/in_faces（按公式直接相减，**可为负**：产物面数多于输入时，如空输入 0 面转出几何、或封口/合并引入新面；判定削减与否看符号而非数值大小） |
 | `byte_reduction` | 同上 | 1 - out_bytes/in_bytes（绑贴图后可为负） |
-| `ratio_actual` | simplify | 实际保留面比（可因 min-faces 跳过或 UV 接缝地板高于请求值，后者见 `UV_SEAM_DECIMATION_LIMITED`） |
+| `ratio_actual` | simplify | 实际保留面比（可因 min-faces 跳过或 UV 接缝下限高于请求值，后者见 `UV_SEAM_DECIMATION_LIMITED`） |
 | `max_error_normalized` | Tier0 simplify | 归一化几何偏差上界（meshopt error 语义） |
 | `bytes_total` | 多部件/lod 命令 | 全部产物文件字节总和（交付总体积；`output.bytes` 只覆盖 `output.path` 单文件） |
 | `parts[]` | segment | `{index, path, vertices, faces}` 逐部件 |

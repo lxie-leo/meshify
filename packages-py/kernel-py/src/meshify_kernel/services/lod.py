@@ -38,11 +38,11 @@ def lod_file(
     total_f = 0
     warnings: List[Dict[str, Any]] = []
 
-    # 层级 0：原始模型直接落盘（LOD 链起点，meshopt LOD 语义）。
+    # 层级 0：原始模型直接写一份（LOD 链起点，meshopt LOD 语义）。
     # 先验加载：空场景/坏输入在写盘前失败，不留半截产物。
     scene = _load_any(input_path)
-    # 多 scene GLB：孤儿几何不挂载，part_000 字节直拷虽保留、但层级 1+ 基于
-    # graph 可达性加载会丢它们——统一先挂载（+ 披露），层级链口径一致
+    # 多场景 GLB：孤儿几何不挂载的话，part_000 是字节直拷还保得住，但层级 1+
+    # 重新按场景图加载就会丢掉它们——统一先挂载并写警告，各层级规则一致
     attached = mu.attach_orphan_geometries(scene)
     if attached:
         warnings.append(
@@ -96,7 +96,7 @@ def lod_file(
         total_v += result["vertices"]
         total_f += result["faces"]
         if level == 1:
-            # extend 而非赋值：层级 1 的简化警告不能覆盖已收集的孤儿挂载披露
+            # extend 而非赋值：层级 1 的简化警告不能覆盖已收集的孤儿挂载警告
             warnings = warnings + result["warnings"]
         stage_input = out_path
 

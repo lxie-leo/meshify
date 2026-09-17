@@ -1,8 +1,20 @@
-"""几何工具层（迁移自 maestro services/model_edit/model_edit.py 的纯几何部分）。
+"""几何工具层：网格的读取与保存，以及几何重建后把 UV / 材质搬回新网格。
 
-改动：
-- 剥离 FastAPI settings / 上传目录 / 数据库相对路径（输出路径由 payload 直传）
-- 保留：UV 最近邻重映射、UV 接缝分裂、材质跨重建保留、trimesh 导出兜底
+读取（两种方式，按命令需要选）：
+- load_scene / load_scene_meshes：按子网格读，各自保留材质（拆件类命令用）
+- load_mesh_merged：把所有子网格合成一个整网格（贴图 / 重投影 UV 用）
+- STEP/STP 走 gmsh 转网格（trimesh 自带的 STEP 后端要额外装 cascadio，不走）
+
+保存：
+- save_mesh：先直接写到目标路径，写不动就在内存里导出，再手动写入文件
+- export_gltf_embedded：导出成单个 .gltf，buffer 和图片全部嵌进文件里
+- attach_orphan_geometries：多场景 GLB 里没挂进场景图的几何补挂回去
+  （不补挂的话，导出时会静默丢掉这部分几何）
+
+UV / 材质搬运：减面这类操作会生成一套新顶点，原来的贴图坐标和材质不会
+自动跟过去。remap_uv 把旧 UV 对到新顶点上，split_uv_seam 处理「绕一圈」
+投影的接缝，material_visual_from 取回材质；搬不动的场合明确降级，交给
+调用方写警告告知用户。
 """
 
 from __future__ import annotations
@@ -22,7 +34,7 @@ def _is_step(file_path: str) -> bool:
 
 
 def _is_empty_obj(file_path: str) -> bool:
-    """OBJ 文本中没有任何 v 行 → 合法空网格（与 Tier0 空 OBJ 同口径，
+    """OBJ 文本中没有任何 v 行 → 合法空网格（与 Tier0 处理空 OBJ 的规则一致，
     交给上层"空场景"处理，而不是让 trimesh 抛错归为输入不可读）。"""
     if Path(file_path).suffix.lower() != ".obj":
         return False
@@ -107,7 +119,7 @@ def load_mesh_merged(file_path: str):
 
 
 def save_mesh(mesh, out_path: str, file_type: Optional[str] = None) -> str:
-    """保存 trimesh 对象（路径直写，失败回退内存导出；迁移自 maestro）。"""
+    """保存网格：先尝试直接写到目标路径；失败则改为在内存里导出，再手动写入文件。"""
     try:
         mesh.export(out_path, file_type=file_type)
     except Exception:
@@ -124,12 +136,13 @@ def save_mesh(mesh, out_path: str, file_type: Optional[str] = None) -> str:
 
 
 def attach_orphan_geometries(scene) -> List[str]:
-    """把 scene.geometry 中未被场景图挂载的孤儿几何以单位变换挂进默认场景。
+    """把 scene.geometry 里没被场景图挂上的孤儿几何，按单位变换挂进默认场景。
 
-    多 scene GLB：trimesh.load(force="scene") 只把默认 scene 的层级挂进 graph，
-    其余 scene 引用的几何成为孤儿——trimesh 导出按 graph 可达性会静默丢弃它们
-    （曾把 3 scene 的 multimat.glb 导成只剩 1/3 子网格）。返回被挂载的几何名，
-    调用方须以 ORPHAN_GEOMETRY_ATTACHED 披露，保证「读到多少、导出多少」。
+    多场景 GLB：trimesh 加载时只把默认场景的层级挂进场景图，其余场景引用的
+    几何就成了孤儿——导出时只保留场景图里挂着的几何，孤儿会被静默丢掉
+    （曾把 3 个场景的 multimat.glb 导到只剩 1/3 的子网格）。返回被挂回的
+    几何名，调用方要写 ORPHAN_GEOMETRY_ATTACHED 警告，保证「读到多少、
+    导出多少」。
     """
     import numpy as np
     import trimesh
@@ -156,7 +169,8 @@ def attach_orphan_geometries(scene) -> List[str]:
 
 
 def export_gltf_embedded(mesh, out_path: str) -> str:
-    """导出自包含 .gltf（外部 buffer/图片内嵌为 data URI；迁移自 maestro）。"""
+    """导出单个 .gltf 文件：外部的 buffer 和图片全部转成 data URI 嵌进文件，
+    交付时只有一个文件，不用带一串附属文件。"""
     import base64
     import json
 
@@ -244,15 +258,18 @@ def _dedup_data_uri_entries(doc: Dict[str, Any]) -> None:
 
 
 # ------------------------------------------------------------------
-# UV / 材质跨几何重建保留（maestro 核心资产，原样迁移）
+# UV / 材质搬运：减面等操作会生成一套新顶点，原网格的贴图坐标和材质
+# 不会自动跟过去。这一节把外观搬回新几何——能精确搬就无损，
+# 搬不动就明确降级，交给调用方写警告告知用户
 # ------------------------------------------------------------------
 
 
 def remap_uv(src_mesh, new_vertices) -> Optional[np.ndarray]:
-    """源网格 UV 精确重映射到重建后的新顶点（maestro 原样迁移）。
+    """把原网格的 UV 搬到几何重建后的新顶点上。
 
-    - 与原顶点重合（QEM 保留顶点）：直接继承，无损
-    - 塌缩新位置：投影到最近三角面重心插值（新位置本在原表面上，接近精确）
+    - 新顶点和某个旧顶点位置重合：直接用那个顶点的 UV，无损
+    - 新顶点是塌缩出来的新位置：找最近的三角形，用它三个顶点的 UV 插值
+      （新位置本来就在原表面上，所以结果接近精确）
     """
     old_uv = getattr(src_mesh.visual, "uv", None)
     if old_uv is None or len(old_uv) == 0:
@@ -308,7 +325,9 @@ def remap_uv(src_mesh, new_vertices) -> Optional[np.ndarray]:
 
 
 def split_uv_seam(mesh, uv) -> Optional[np.ndarray]:
-    """分裂 UV 接缝顶点，消除周期投影在 θ=±π 处的跨界拉花（maestro 原样迁移）。"""
+    """拆开 UV 接缝上的顶点。柱面、球面这类「绕一圈」的投影，在首尾相接处
+    u 会从 0 跳到 1，跨过这条缝的三角形会被拉成横穿整张贴图的条纹；把缝上
+    的顶点复制一份、u 错开一个周期，两边就各自连续了。"""
     if uv is None:
         return None
     faces = np.asarray(mesh.faces)
@@ -339,11 +358,11 @@ def split_uv_seam(mesh, uv) -> Optional[np.ndarray]:
 
 
 def material_visual_from(src_mesh, target_vertices=None) -> Optional[Any]:
-    """几何重建后从源网格提取可复用材质 visual（maestro 原样迁移）。
+    """几何重建后，从原网格取回还能用的材质。
 
-    - 无贴图：直接复用原材质（纯色外观无损）
-    - 有贴图 + target_vertices：UV 最近邻重映射保纹理
-    - 有贴图但无法重映射：剥离贴图仅保留 baseColor 标量（降级须由调用方披露）
+    - 没有贴图：材质直接拿来用，纯色外观无损
+    - 有贴图且给了 target_vertices：把 UV 搬过去，贴图保住
+    - 有贴图但 UV 搬不过去：去掉贴图只留颜色（降级，调用方必须写警告告知）
     """
     try:
         from trimesh.visual.texture import TextureVisuals
@@ -369,5 +388,5 @@ def material_visual_from(src_mesh, target_vertices=None) -> Optional[Any]:
 
 
 def material_visual_degraded(src_mesh) -> Optional[Any]:
-    """仅保留 PBR 标量（baseColor/metallic/roughness）的降级材质（供披露路径用）。"""
+    """仅保留 PBR 标量（baseColor/metallic/roughness）的降级材质（材质被迫降级、需要写警告时用）。"""
     return material_visual_from(src_mesh, target_vertices=None)

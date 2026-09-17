@@ -103,7 +103,7 @@ describe('manifest 协议：真实 CLI 产物', () => {
 		const r = cli(['segment', copy, '--mode', 'connected', '--json']);
 		expect(r.code).toBe(0);
 		expectAgreement(r.manifest, true, 'cli segment');
-		// Tier0：单 GLB 多节点（部件在 metrics.parts 披露）
+		// Tier0：单 GLB 多节点（部件列在 metrics.parts 里）
 		expect((r.manifest as any).metrics.parts.length).toBeGreaterThan(1);
 		expect((r.manifest as any).output.files.some((f: any) => f.role === 'asset')).toBe(true);
 	});

@@ -9,7 +9,7 @@ import {
 } from '@meshify/core';
 
 /**
- * 报告收尾：manifest 组装 → schema 校验 → 落盘 → 打印。
+ * 报告收尾：manifest 组装 → schema 校验 → 写文件 → 打印。
  * - 报告文件是工具自有日志（<input>.meshify/ 内），可自动覆盖；模型产物才受 --overwrite 约束
  * - --json 时 stdout 输出完整 manifest（供 Agent 消费），否则人类可读摘要
  */
@@ -21,13 +21,13 @@ export interface EmitOptions {
 
 export type ReportDraft = Parameters<typeof generateReport>[0];
 
-/** 组装 + 校验 + 落盘 + 打印；返回最终 report。 */
+/** 组装 + 校验 + 写文件 + 打印；返回最终 report。 */
 export function emitReport(draft: ReportDraft, opts: EmitOptions): MeshifyReport {
 	const report = generateReport(draft);
 	return emitExistingReport(report, opts);
 }
 
-/** 已组装好的 manifest（Tier1 返回）校验 + 落盘 + 打印。 */
+/** 已组装好的 manifest（Tier1 返回）校验 + 写文件 + 打印。 */
 export function emitExistingReport(report: MeshifyReport, opts: EmitOptions): MeshifyReport {
 	const validated = validateReport(report);
 	if (!validated.ok) {
@@ -51,7 +51,7 @@ function writeReportFile(p: string, report: MeshifyReport): void {
 }
 
 /**
- * 早失败路径的最小 manifest 落盘：不做摘要打印（无成功产物可述），
+ * 早失败路径也要写出最小 manifest：不做摘要打印（没有成功产物可说），
  * 仅写报告文件 + --json 时 stdout 输出，让 Agent 在非 0 退出码下也能拿到
  * 结构化错误（errors[] 携带原因）。组装失败静默——不掩盖原始错误。
  */

@@ -11,7 +11,7 @@ import { warn, type ReportWarning } from './warnings.js';
  * 1. Tier1 输入含 skin/蒙皮/动画/morph 时自动降回 Tier0，
  *    写 SKIN_ANIMATION_PRESERVED 警告（trimesh 管线加载即丢动画，已证实的路线盲区）。
  * 2. Tier1 需要但未就绪时：给出安装指引；可降级的一律降级执行 Tier0
- *    并必写 TIER_DOWNGRADED 警告，无 TS 回退路径（STEP）则 exit 5 —— 绝不信默降级。
+ *    并必写 TIER_DOWNGRADED 警告，无 TS 回退路径（STEP）则 exit 5 —— 绝不悄悄降级。
  */
 
 export type Tier = 'ts-wasm' | 'python-uv';

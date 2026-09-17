@@ -50,7 +50,7 @@ export function registerSegment(program: Command): void {
 			.option('--mode <mode>', 'segmentation mode: connected | plane | semantic (required)')
 			.option('--clusters <n>', 'semantic cluster count (default 8)', '8')
 			.option('--axis <axis>', 'plane mode: cut axis x | y | z (mutually exclusive with --origin/--normal)')
-			.option('--position <n>', 'plane mode: cut position ∈ [-1,1] (linearly mapped across the bbox; maestro slider semantics)', '0')
+			.option('--position <n>', 'plane mode: cut position ∈ [-1,1] (linearly mapped across the bbox, slider-friendly)', '0')
 			.option('--origin <vec3>', 'plane mode: plane point "x,y,z" in native coordinates (mutually exclusive with --axis)')
 			.option('--normal <vec3>', 'plane mode: plane normal "x,y,z" in native coordinates (mutually exclusive with --axis)')
 			.option('--no-cap', 'plane mode: disable cross-section capping (earcut capping for watertightness is on by default, pitfall 5)')
@@ -236,7 +236,8 @@ function soupBounds(soup: Soup): { min: number[]; max: number[] } | null {
 	return { min, max };
 }
 
-/** semantic 部件预览着色（对齐 maestro build_semantic_preview：黄金角互斥色相）。 */
+/** semantic 拆件后的预览配色：色相按黄金角递增，相邻编号的颜色差别最大，
+ *  不准备色表也能一眼分清部件。 */
 function applyPartColors(doc: Document, colors: [number, number, number][]): void {
 	const scene = doc.getRoot().listScenes()[0];
 	if (!scene) return;

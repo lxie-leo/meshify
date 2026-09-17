@@ -47,7 +47,7 @@ export function textureDocument(
 	for (const info of prims) {
 		let effectiveMode: TextureMode = opts.mode;
 		if (opts.mode === 'uv' && !info.localUvs) {
-			// 模式 uv 但子网格缺 UV：自动补盒式投影（坑资产：绝不静默，写警告）
+			// 模式 uv 但子网格缺 UV：自动补盒式投影
 			warnings.push(
 				warn('AUTO_BOX_UV_GENERATED', `${info.name}: no UV coordinates; box UV auto-generated`, info.name),
 			);

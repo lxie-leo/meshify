@@ -14,7 +14,7 @@
 ## 判定规则（tier-orchestrator，硬规则）
 
 1. **动画/蒙皮/morph 输入 → 强制 Tier0**
-   trimesh 管线加载即丢动画（maestro 勘察实证）。检测到 animations/skins 时路由层直接改走
+   trimesh 管线加载即丢动画（实测确认）。检测到 animations/skins 时路由层直接改走
    Tier0 并写 `SKIN_ANIMATION_PRESERVED`。`--tier py` 也拦。
 2. **STEP 输入 → 强制 Tier1**
    Tier0 无解析能力。Tier1 未就绪 → exit 5 + 安装指引。**没有降级路径，这是能力边界不是故障。**
@@ -38,5 +38,5 @@
 - segment/lod 多部件走 `output_dir/part_000.glb…`（Tier0 是单 GLB 多节点或独立 lodN 文件）
 - optimize 无几何压缩（`TIER_DOWNGRADED`）
 - `--preview-html` 同样生效（成功产物上生成）；但 STEP 等非 glTF 输入没有浏览器渲染形态，
-  before 侧缺席 → 单视窗页 + `PREVIEW_BEFORE_UNAVAILABLE` 披露；产物非 GLB（convert --to stl 等）整页跳过
+  before 侧缺席 → 单视窗页 + `PREVIEW_BEFORE_UNAVAILABLE` 警告；产物非 GLB（convert --to stl 等）整页跳过
 - 部件文件覆盖约定两侧一致：存在即拒（exit 4），`--overwrite` 才覆盖

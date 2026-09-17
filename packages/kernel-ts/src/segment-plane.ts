@@ -8,7 +8,7 @@ import { weldKey } from './geometry/union-find.js';
 /**
  * 平面切割（Tier0）：逐三角形半空间裁剪 + 截面 earcut 三角化封口。
  *
- * maestro 坑资产内置：
+ * 防坑设计（默认行为兜底，同时写警告码告知用户）：
  * - 坑 5：不封口则两半是开口壳、3D 打印/布尔运算直接废——截面默认 earcut 封口保水密
  * - 坑 6：封口三角化可能产生零面积碎片三角形，按面积过滤会在壳上开洞——原样保留
  *   （渲染不可见），写 FRAGMENT_FACES_KEPT 警告
@@ -206,7 +206,7 @@ export function cutSoupByPlane(soup: Soup, plane: PlaneSpec, opts: { cap: boolea
 				warn('UV_REMAP_APPROXIMATED', 'Cross-section cap vertex UVs interpolated along the cut edge (approximate); textures may stretch slightly at the section'),
 			);
 		}
-		// 显式披露：截面存在（产生了交点）却未能封口——典型如重合壳/非流形截面
+		// 显式写警告：截面存在（产生了交点）却未能封口——典型如重合壳/非流形截面
 		if (!capped && crossing.size > 0) {
 			warnings.push(
 				warn(

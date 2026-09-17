@@ -7,15 +7,17 @@ import { collectPrimitives, type PrimitiveInfo } from './document-utils.js';
 /**
  * Tier0 QEM 减面（meshopt_simplify，C++ → WASM）。
  *
- * maestro 坑资产内置：
- * - 坑 1：gltf-transform 操作 glTF 场景图本身，材质结构性不丢（此坑在 TS 路线天然不存在）
- * - 坑 12：面数 < min-faces（默认 200）的子网格跳过 + SMALL_MESH_SKIPPED 警告
- * - 坑 2 相关：带贴图子网格简化后提示 UV_REMAP_APPROXIMATED（顶点子集采样，极端形变区可能拉伸）
- * - 语义对齐 pyfqmr：ratio 为「保留面比例」，target_faces 优先；preserve_border ↔ lockBorder
+ * 防坑设计（默认行为兜底，同时写警告码告知用户）：
+ * - 坑 1：gltf-transform 直接操作 glTF 场景图，材质天然不会丢（TS 路线没有这个坑）
+ * - 坑 12：面数小于 min-faces（默认 200）的子网格跳过不减，写 SMALL_MESH_SKIPPED
+ * - 坑 2 相关：带贴图的子网格减面后写 UV_REMAP_APPROXIMATED（UV 按顶点子集
+ *   近似搬移，剧烈变形的区域可能拉伸）
+ * - 语义和 pyfqmr 一致：ratio 是「保留的面数比例」，target_faces 优先；
+ *   preserve_border 对应 lockBorder
  *
- * 误差上限策略：meshopt 受 error 约束可能提前停止（达不到目标面数），
- * 为对齐 maestro「QEM 总能命中目标面数」的语义，error 从给定值起按 10 倍逐级放宽至 1.0，
- * 最终实际误差如实记入 manifest（max_error_normalized）。
+ * 误差上限策略：meshopt 会受 error 约束提前停下来，面数减不到位。为了
+ * 「要求减到多少面就减到多少面」，error 从给定值起每次放宽 10 倍，直到
+ * 1.0；实际产生的误差如实写进 manifest（max_error_normalized）。
  */
 
 export interface SimplifyKernelOptions {
@@ -70,7 +72,7 @@ export async function simplifyDocument(
 	let facesAfter = 0;
 	let maxError = 0;
 	let partial = false;
-	// UV 接缝地板：带 UV 子网格请求目标未达成（实际面数 > 目标 × 1.2）的名单。
+	// UV 接缝造成的面数下限：带 UV 子网格请求目标未达成（实际面数 > 目标 × 1.2）的名单。
 	// 机理：UV 岛接缝处同位顶点被切开（位同一焊接不并合），meshopt 视其为锁定边界，
 	// 无法跨接缝坍缩 → 深度减面存在结构性下限，--no-keep-border/--merge 均绕不开。
 	const uvLimited: string[] = [];
@@ -112,7 +114,7 @@ export async function simplifyDocument(
 				// 简化未生效（拓扑受限），保留原样
 				facesAfter += before;
 			}
-			// 无论部分达成还是完全未动，只要带 UV 且远超请求目标即记入接缝地板名单
+			// 无论部分达成还是完全未动，只要带 UV 且远超请求目标即记入接缝下限名单
 			if (info.localUvs && perMesh[perMesh.length - 1].after > Math.max(1, Math.floor(target * 1.2))) {
 				uvLimited.push(info.name);
 			}

@@ -12,15 +12,15 @@ meshify texture <input> --map <mode> [--image tex.png] [--metallic 0] [--roughne
 |---|---|---|
 | `uv` | 保留现有 UV | 输入已有正确 UV |
 | `planar` | XZ 平面俯视投影 | 平板/浮雕类 |
-| `cylindrical` | 柱面展开（Y 轴） | 杯子/管道；帽面自动改平面投影 |
-| `spherical` | 球面展开 | 球/近似球；帽面同上 |
+| `cylindrical` | 柱面展开（Y 轴） | 杯子/管道；顶盖/底盖自动改平面投影 |
+| `spherical` | 球面展开 | 球/近似球；顶盖/底盖同上 |
 | `box` | 六朝向三平面，每面铺满 | 方块件/文字图表贴图（无 UV 时的自动回退） |
 
 ## 行为
 
 - **管线顺序：贴图放最后。** 先 simplify/segment 再贴图——投影会把 UV 岛接缝烤进网格，
   接缝等效于锁定边界，会封死之后任何深度减面的下限（`UV_SEAM_DECIMATION_LIMITED`，
-  详见 simplify.md）。减面后重贴图代价很低，贴图后再跟接缝地板较劲不划算
+  详见 simplify.md）。减面后重贴图代价很低，贴图后再跟接缝下限较劲不划算
 - `--map uv` 但模型无 UV → 自动盒式投影 + `AUTO_BOX_UV_GENERATED`
 - UV 是合并产生的色块图集（≤64px 贴图特征）→ 忽略并盒式回退 + `ATLAS_UV_IGNORED`（坑 2）
 - `--image`：绑定 baseColor 贴图；非 PNG/JPEG（webp/tiff/bmp/gif）自动规范化转 PNG +
@@ -31,8 +31,8 @@ meshify texture <input> --map <mode> [--image tex.png] [--metallic 0] [--roughne
 
 ## Tier1 特有防护
 
-- 柱/球接缝：跨缝三角形 u 跨度 >0.5 时分裂接缝顶点（u-1），消除整图扫描拉花带
-- 帽面（近水平面）柱/球投影退化 → 改 XZ 平面投影铺满
+- 柱/球接缝：跨缝三角形 u 跨度 >0.5 时分裂接缝顶点（u-1），消除横穿整张贴图的拉伸条纹
+- 顶盖/底盖（近水平面）柱/球投影退化 → 改 XZ 平面投影铺满
 
 ## 产物
 

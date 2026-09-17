@@ -3,7 +3,7 @@
 //   node fixtures/generate.mjs            # 全量（Tier0/GLB 系列 + uv 可用时生成 STEP）
 //   node fixtures/generate.mjs --big      # 追加 >500 万面大网格（资源防护样本，~150MB，慢）
 //
-// 全部程序化生成（无外部资产依赖）：PNG 走自带 zlib 编码器，几何走自带生成器，
+// 全部程序化生成（不依赖任何外部文件）：PNG 走自带 zlib 编码器，几何走自带生成器，
 // STEP 用 kernel-py 的 OCC 内核（uv 不可用时跳过并提示）。
 
 import fs from 'node:fs';

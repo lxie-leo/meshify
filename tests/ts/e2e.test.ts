@@ -116,7 +116,7 @@ describe('Agent 工作流 E2E', () => {
 		expect(html).toContain('"before":[]');
 		expect(html).toContain('#panes.single #pane-before');
 		expect(html).toContain('AFTER · output');
-		// 披露不缺席
+		// 警告必须写，不能缺席
 		expect(m.warnings.some((w: any) => w.code === 'PREVIEW_BEFORE_UNAVAILABLE')).toBe(true);
 	}, 180_000);
 
@@ -132,7 +132,7 @@ describe('Agent 工作流 E2E', () => {
 	}, 180_000);
 
 	// STEP 是 CAD 惯例 Z-up，glTF 规范 Y-up：产物必须旋转过（assembly 的立柱沿 +Z，
-	// 转换后高度应出现在 Y 轴）且 manifest 披露 UP_AXIS_NORMALIZED
+	// 转换后高度应出现在 Y 轴）且 manifest 写 UP_AXIS_NORMALIZED 警告
 	it.skipIf(!hasUv())('STEP(Tier1) 产物为 glTF 规范 Y-up + UP_AXIS_NORMALIZED 披露', () => {
 		const dir = freshDir('e2e-step-yup');
 		const copy = path.join(dir, 'assembly.step');
@@ -185,7 +185,7 @@ describe('Agent 工作流 E2E', () => {
 	}, 300_000);
 
 	// --up-axis auto：带四角孔底板的躺姿部件（fixture 底板 z=0..3、总高 21、四角 r=1.5 通孔）
-	// → 高置信判定朝上轴 z + UP_AXIS_AUTO 披露 + 旋转扶正（高度 21 立到 Y）
+	// → 高置信判定朝上轴 z + UP_AXIS_AUTO 警告 + 旋转扶正（高度 21 立到 Y）
 	it.skipIf(!hasUv())('STEP(Tier1) convert --up-axis auto：高置信自动扶正 + UP_AXIS_AUTO 披露', () => {
 		const dir = freshDir('e2e-step-upaxis-auto');
 		const copy = path.join(dir, 'holed-base.step');
@@ -300,7 +300,7 @@ describe('Agent 工作流 E2E', () => {
 		expect(m.output.path).toBe(lods[0].path);
 		expect(m.output.bytes).toBe(lods[0].bytes);
 		expect(m.metrics.bytes_total).toBe(lods.reduce((s: number, f: any) => s + f.bytes, 0));
-		// 顶层口径与磁盘一致；bytes_total 覆盖逐级 lod 文件（preview 未生成）
+		// 顶层统计与磁盘一致；bytes_total 覆盖逐级 lod 文件（preview 未生成）
 		expect(fs.statSync(m.output.path).size).toBe(m.output.bytes);
 	}, 120_000);
 });

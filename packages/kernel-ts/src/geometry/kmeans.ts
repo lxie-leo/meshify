@@ -1,4 +1,6 @@
-/** 轻量 KMeans（法线+位置联合聚类用，对齐 maestro sklearn KMeans 语义：kmeans++ 初始化 + 固定种子）。 */
+/** 轻量 KMeans（给法线+位置聚类用）。TS 侧没有 sklearn，自己实现一份行为
+ *  一致的：kmeans++ 选初始质心 + 固定随机种子，结果可复现，与 Tier1 的
+ *  sklearn 路线对得上。 */
 
 /** 确定性 PRNG（mulberry32），对齐 sklearn random_state=42 的「可复现」语义。 */
 export function mulberry32(seed: number): () => number {
@@ -25,7 +27,7 @@ export interface KMeansOptions {
 	k: number;
 	seed?: number;
 	maxIterations?: number;
-	/** 采样训练（大网格加速，对齐 maestro n_clusters*100 采样）；标签仍对全量预测 */
+	/** 训练采样上限：大网格只对采样出的部分面做迭代（提速），标签仍会给所有面打上 */
 	sampleLimit?: number;
 }
 

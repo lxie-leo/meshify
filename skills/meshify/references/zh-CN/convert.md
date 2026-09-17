@@ -15,12 +15,12 @@ meshify convert <input> --to <glb|gltf|obj|stl|ply>
 
 - **Tier0**（glb/gltf/obj/stl/ply 输入）：读入重建为 glTF Document 后导出
   - OBJ 读入：自动找同名 `.mtl` 与引用贴图，材质转 PBR
-  - glTF 输出：外部 `.bin` 与贴图伴生落盘在产物同目录（manifest.files 逐个列出，搬运时一并带走）
+  - glTF 输出：外部 `.bin` 与贴图写在产物同目录（manifest.files 逐个列出，搬运时一并带走）
   - OBJ 输出：主文件 + `.mtl` + 伴生贴图（manifest.files 逐个列出）
 - **Tier1**（step/stp 输入，或 `--tier py`）：STEP 经 OCC 网格化 → 颜色分组 → 目标格式
   （细节见 cad-step.md）
 
-## 保真与披露
+## 保真与警告
 
 - 材质零丢失是硬约束（坑 1）；OBJ→GLB 等价材质合并时写 `MATERIALS_MERGED`
 - OBJ 的 `.mtl` 无法解析（或其中缺个别名字）时：每个 usemtl 名保留为独立的默认灰材质并写 `MTL_MISSING`（名字保留；颜色/贴图无从恢复）

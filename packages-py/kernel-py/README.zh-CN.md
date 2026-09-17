@@ -29,8 +29,3 @@ uv sync
 ```
 
 国内网络可先配置镜像：`set UV_DEFAULT_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple`
-
-## 服务层来源
-
-迁移自 maestro backend `services/model_edit/`（简化/分割/贴图/STEP），
-剥离 FastAPI/DB；几何算法与防坑逻辑原样保留，警告改为协议警告码写入 manifest。

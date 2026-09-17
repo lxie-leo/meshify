@@ -1,7 +1,7 @@
 /**
  * 语义化退出码协议（与 docs/plan.md §3.4 对齐）。
  *
- * Agent 按 exit code 决定下一步动作；所有码都必须在 SKILL.md 中披露。
+ * Agent 按 exit code 决定下一步动作；所有码都必须在 SKILL.md 中写明。
  */
 export const EXIT_OK = 0;
 export const EXIT_INPUT_UNREADABLE = 2;

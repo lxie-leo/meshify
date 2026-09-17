@@ -5,10 +5,11 @@ import { UnionFind, weldKey } from './geometry/union-find.js';
 /**
  * 连通域分割（Tier0）：按共享边连通性拆分独立壳体。
  *
- * 移植自 maestro useThreeScene.ts 连通分量实现：
- * - 顶点按量化位置焊接（QUANT=1e6，绝对容差 1e-6）——跨子网格/跨材质的位置重合
- *   顶点可连通（STEP 多色零件导出的 glTF 常见：几何连续但索引隔离）
- * - 面数 < min-faces 的碎片部件丢弃；若全部会被丢则保留最大者（绝不输出空结果）
+ * 关键点：
+ * - 判连通前先按位置焊接顶点（量化精度 1e-6）：STEP 导出的多色零件常常
+ *   「几何挨着、顶点各算各的」，不焊接会被拆成一堆碎件
+ * - 面数小于 min-faces 的碎部件丢弃；如果全都会被丢，就保留最大的那个
+ *   （绝不让结果为空）
  */
 
 export interface ConnectedSegmentResult {

@@ -31,9 +31,3 @@ uv sync
 
 On slow links to PyPI (mainland China), configure a mirror first:
 `set UV_DEFAULT_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple`
-
-## Origin of the service layer
-
-Migrated from the maestro backend `services/model_edit/` (simplify/segment/texture/STEP),
-with FastAPI/DB stripped out; geometry algorithms and pitfall guards are preserved as-is, and
-warnings became contract warning codes in the manifest.

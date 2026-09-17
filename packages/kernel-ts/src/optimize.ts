@@ -10,7 +10,7 @@ import { simplifyDocument } from './simplify.js';
  * →（可选量化）→（可选 meshopt/draco 几何压缩）。
  *
  * - 贴图压缩经 sharp（webp/jpeg/png），超过 --texture-size 自动降采样并写
- *   TEXTURE_DOWNSCALED（坑 11：尺寸换清晰度，显式披露）
+ *   TEXTURE_DOWNSCALED（坑 11：尺寸换清晰度，显式写警告）
  * - draco 依赖可选包 draco3dgltf：未安装时跳过几何压缩 + DRACO_UNAVAILABLE，
  *   其余步骤照常完成（部分成功而非整体失败）
  * - meshopt 自带量化（QuantizeOptions 继承），codec=meshopt 时不重复 quantize()
@@ -50,7 +50,7 @@ export async function optimizeDocument(
 	const facesBefore = totalFaces(prims);
 	const textureCount = doc.getRoot().listTextures().length;
 
-	// 1. 去重 + 修剪（重复材质/贴图/访问器、悬空属性）
+	// 1. 去重 + 修剪（重复的材质/贴图/访问器、没人引用的属性）
 	await doc.transform(dedup(), prune());
 
 	// 2. 可选简化

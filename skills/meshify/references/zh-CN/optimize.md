@@ -15,7 +15,7 @@ meshify optimize <input> [--ratio 0.5] [--error 0.01] [--compression meshopt]
 | `--error <n>` | 0.01 | 简化误差上限 |
 | `--compression` | meshopt | `meshopt` / `draco` / `none`。draco 需可选依赖，缺失时跳过并 `DRACO_UNAVAILABLE` |
 | `--texture-format` | webp | `webp` / `jpeg` / `png` / `none`（不动贴图）。glTF 核心 GPU 上限 2048 的兼容性最好 |
-| `--texture-size <n>` | 不限 | 贴图最长边上限，超出降采样（坑 11：降采样必须披露 `TEXTURE_DOWNSCALED`） |
+| `--texture-size <n>` | 不限 | 贴图最长边上限，超出降采样（坑 11：降采样必须写 `TEXTURE_DOWNSCALED` 警告） |
 | `--min-faces <n>` | 200 | 简化跳过阈值 |
 
 ## 管线顺序（Tier0）
@@ -29,7 +29,7 @@ meshify optimize <input> [--ratio 0.5] [--error 0.01] [--compression meshopt]
 ## Tier1（--tier py）边界
 
 meshopt/draco 是 WASM 编码器（Tier0 专属）。Tier1 路线输出**未压缩基线**并写
-`TIER_DOWNGRADED` 披露——需要压缩时别加 `--tier py`。
+`TIER_DOWNGRADED` 警告——需要压缩时别加 `--tier py`。
 
 ## 产物
 

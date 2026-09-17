@@ -1,7 +1,7 @@
 /**
  * 2026-09-03 全量测试回归（6 BUG + 观察项修复固化）。
  * 覆盖：optimize stdout 纯净（Logger）、PLY face 额外属性、空场景 convert、
- * OBJ 二进制冒充披露、多 scene 孤儿几何面数守恒（双内核）、py lod 非 glb 输入、
+ * OBJ 二进制冒充写警告、多 scene 孤儿几何面数守恒（双内核）、py lod 非 glb 输入、
  * py plane 封口（networkx）、py gltf 贴图去重。
  */
 
@@ -105,7 +105,7 @@ describe('全量回归：空场景 convert', () => {
 });
 
 // ------------------------------------------------------------------
-// 观察项 ⑧：二进制内容冒充 .obj → FORMAT_CONTENT_MISMATCH 披露（不再静默空结果）
+// 观察项 ⑧：二进制内容冒充 .obj → FORMAT_CONTENT_MISMATCH 写警告（不再静默空结果）
 // ------------------------------------------------------------------
 describe('全量回归：OBJ 扩展名冒充', () => {
 	it('STL 字节改名为 .obj → inspect 警告 FORMAT_CONTENT_MISMATCH', () => {
@@ -120,7 +120,7 @@ describe('全量回归：OBJ 扩展名冒充', () => {
 
 // ------------------------------------------------------------------
 // BUG ②：多 scene GLB 的孤儿几何——Tier1 曾静默丢子网格（12/36 面）；
-// Tier0 全量保留。修复后双内核面数守恒 + ORPHAN_GEOMETRY_ATTACHED 披露
+// Tier0 全量保留。修复后双内核面数守恒 + ORPHAN_GEOMETRY_ATTACHED 写警告
 // ------------------------------------------------------------------
 describe('全量回归：多 scene 孤儿几何面数守恒', () => {
 	it('Tier0：multiscene.glb --to stl → 332 面（12 盒 + 320 球全保留）', () => {

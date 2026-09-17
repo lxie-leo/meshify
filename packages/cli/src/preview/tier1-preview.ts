@@ -11,8 +11,8 @@ import { writePreviewHtml, type PreviewModel } from './generate-html.js';
  * Tier1 --preview-html（统一在 routeTier 收口，全命令共享）：
  * - after = manifest 里的 GLB 产物（多部件逐个装入同一视窗）
  * - before 仅 glb/gltf 输入（--tier py 场景）可视；STEP 等非 glTF 输入无浏览器渲染形态
- *   → 单视窗预览 + PREVIEW_BEFORE_UNAVAILABLE 披露（绝不静默吞掉 --preview-html）
- * - 产物非 GLB（如 convert --to stl）无对比意义 → 跳过生成 + 同码披露
+ *   → 单视窗预览 + PREVIEW_BEFORE_UNAVAILABLE 警告（绝不悄悄丢掉 --preview-html）
+ * - 产物非 GLB（如 convert --to stl）无对比意义 → 跳过生成 + 同码警告
  */
 export interface Tier1PreviewArgs {
 	input: string;
@@ -47,7 +47,7 @@ export async function attachTier1Preview(report: MeshifyReport, args: Tier1Previ
 				bytes: await documentToGlbBytes(await readDocument(args.input)),
 			});
 		} catch {
-			// before 快照失败只影响左视窗，产物与 after 侧不受影响；披露即可
+			// before 快照失败只影响左视窗，产物与 after 侧不受影响；写警告即可
 		}
 	}
 	if (before.length === 0) {

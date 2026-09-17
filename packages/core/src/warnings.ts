@@ -1,7 +1,10 @@
 /**
- * 警告码协议（对齐 plan §3.3；来源为 maestro 12 实坑资产的「默认行为 + 警告码」内嵌）。
+ * 警告码协议（对齐 plan §3.3）。
  *
- * 规则：所有降级/近似/跳过必须显式写进 manifest 的 warnings，绝不信默降级。
+ * 规则：凡是降级、近似、跳过的处理，都必须带警告码写进 manifest 的
+ * warnings，绝不悄悄进行。与「坑」相关的码来自实测踩过的 12 个坑，
+ * 每个坑的对策是「默认行为兜底 + 警告码告知」；其余码按同一规则随新
+ * 能力追加（如孤儿几何挂载、up-axis 规范化）。
  */
 export const WARNING_CODES = [
 	/** 坑 12：子网格面数 < min-faces，跳过简化原样保留 */
@@ -54,7 +57,7 @@ export const WARNING_CODES = [
 	'PREVIEW_BEFORE_UNAVAILABLE',
 	/** STEP（CAD 惯例 Z-up）产物已旋转为 glTF 规范 Y-up（几何形状/手性不变，仅朝向规范化） */
 	'UP_AXIS_NORMALIZED',
-	/** --up-axis auto 高置信判定成功：披露判定的朝上轴与几何依据（低置信时 exit 4 拒绝并列候选） */
+	/** --up-axis auto 高置信判定成功：写明判定的朝上轴与几何依据（低置信时 exit 4 拒绝并列候选） */
 	'UP_AXIS_AUTO',
 ] as const;
 

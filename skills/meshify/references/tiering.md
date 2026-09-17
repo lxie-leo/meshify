@@ -14,7 +14,7 @@
 ## Routing rules (tier-orchestrator, hard rules)
 
 1. **Animation/skinning/morph input → forced Tier0**
-   The trimesh pipeline drops animation on load (verified against maestro). When animations/skins
+   The trimesh pipeline drops animation on load (verified empirically). When animations/skins
    are detected, the routing layer switches to Tier0 and writes `SKIN_ANIMATION_PRESERVED`.
    `--tier py` is intercepted too.
 2. **STEP input → forced Tier1**

@@ -29,8 +29,8 @@ import { draftOf, fileEntryOf, outputOf, readBytes } from './simplify.js';
 
 /**
  * meshify optimize —— 一体化 Web 交付管线。
- * dedup → prune →（可选简化）→（可选贴图 WebP 压缩/降采样，坑 11 披露）
- * → meshopt/draco 几何压缩（默认 meshopt；draco 需可选依赖，缺失时 DRACO_UNAVAILABLE 披露）。
+ * dedup → prune →（可选简化）→（可选贴图 WebP 压缩/降采样，坑 11 写警告）
+ * → meshopt/draco 几何压缩（默认 meshopt；draco 需可选依赖，缺失时写 DRACO_UNAVAILABLE）。
  */
 export function registerOptimize(program: Command): void {
 	addCommonOptions(

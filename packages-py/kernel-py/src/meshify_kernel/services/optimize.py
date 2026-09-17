@@ -1,9 +1,9 @@
 """一体化优化（Tier1 路径）。
 
 Tier1 无 meshopt/draco WASM 编码器（那是 Tier0 专属）：几何压缩参数
-在此显式降级并披露，绝不假装压缩过。
+在此显式降级并写警告，绝不假装压缩过。
 - 简化（可选 ratio）→ pyfqmr
-- 贴图压缩/降采样：Pillow（webp 不可用于 glTF 核心 → 转 PNG/JPEG 并披露）
+- 贴图压缩/降采样：Pillow（webp 不可用于 glTF 核心 → 转 PNG/JPEG 并写警告）
 """
 
 from __future__ import annotations
@@ -91,7 +91,7 @@ def _reexport(
 
 
 def _downscale_textures(scene, max_texture_size: Optional[int]) -> None:
-    """贴图规范化：非 PNG/JPEG → PNG；超尺寸 → 降采样（坑 11 披露）。"""
+    """贴图规范化：非 PNG/JPEG → PNG；超尺寸 → 降采样（坑 11，写警告）。"""
     import io
 
     from PIL import Image

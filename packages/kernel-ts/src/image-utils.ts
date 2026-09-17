@@ -16,7 +16,7 @@ export function sniffImageMime(b: Uint8Array): string | null {
 export interface NormalizedImage {
 	bytes: Uint8Array;
 	mime: string;
-	/** 非 PNG/JPEG 源被转换过（调用方写 TEXTURE_DOWNSCALED 披露） */
+	/** 非 PNG/JPEG 源被转换过（调用方写 TEXTURE_DOWNSCALED 警告） */
 	converted: boolean;
 }
 

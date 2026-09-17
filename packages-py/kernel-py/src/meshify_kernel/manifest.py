@@ -4,7 +4,7 @@
 - glb/gltf：pygltflib 解析原始 JSON（属性/材质/贴图/动画以文件声明为准，
   不依赖 trimesh 的推断性补全）
 - obj/stl/ply：trimesh 读取（--tier py 显式指定时的路径）
-- step/stp：gmsh OpenCASCADE 网格化后统计（inspect 语义：无产物落盘）
+- step/stp：gmsh OpenCASCADE 网格化后统计（inspect 语义：不写产物文件）
 """
 
 from __future__ import annotations
@@ -179,7 +179,7 @@ def _gltf_input_info(path: str) -> Dict[str, Any]:
             except OSError:
                 nbytes = 0
         textures.append({"uri": uri, "mime": mime, "bytes": int(nbytes), "resolution": None})
-    _ = buffers  # 仅表明已读取；GLB buffer 内嵌无需落盘检查
+    _ = buffers  # 仅表明已读取；GLB 的 buffer 内嵌在文件里，无需检查外部文件
 
     bbox: Optional[List[List[float]]] = None
     world_of = _node_world_matrices(gltf)

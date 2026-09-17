@@ -21,7 +21,7 @@ async function pyInspect(input: string) {
 }
 
 async function tsInspect(input: string) {
-	// 与 CLI loadInput 同口径：GLB/GLTF 走 NodeIO，STL 走自研读取器
+	// 与 CLI loadInput 用同一规则：GLB/GLTF 走 NodeIO，STL 走自研读取器
 	const doc = input.toLowerCase().endsWith('.stl')
 		? stlToDocument(new Uint8Array(fs.readFileSync(input)), path.basename(input, '.stl'))
 		: await readDocument(input);

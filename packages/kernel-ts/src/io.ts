@@ -7,7 +7,7 @@ import { MeshoptDecoder, MeshoptEncoder } from 'meshoptimizer';
  * - 注册 ALL_EXTENSIONS（读 side 兼容所有 Khronos 扩展）
  * - meshopt decoder/encoder 按需就绪（读写 EXT_meshopt_compression）
  * - draco3dgltf 为 optionalDependencies：可用时注册 decoder/encoder，
- *   不可用时 Draco 读写均显式报错（doctor 会披露）
+ *   不可用时 Draco 读写均显式报错（doctor 会写明）
  *
  * 注意：OBJ/STL/PLY 不在 gltf-transform 支持范围内（实测 4.5），
  * 由本包 mesh-readers.ts / mesh-writers.ts 自研实现。

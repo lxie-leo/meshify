@@ -32,7 +32,7 @@ import { writePreviewHtml } from '../preview/generate-html.js';
 
 /**
  * meshify simplify —— QEM 减面。
- * 坑资产：坑 1（材质结构性不丢）/ 坑 12（< min-faces 跳过 + SMALL_MESH_SKIPPED）。
+ * 防坑要点：坑 1（材质不丢）/ 坑 12（面数小于 min-faces 跳过 + SMALL_MESH_SKIPPED）。
  */
 export function registerSimplify(program: Command): void {
 	addCommonOptions(
@@ -178,7 +178,7 @@ export function outputOf(
 	};
 }
 
-/** 预览页需要先于 emit 拿到 report 对象（generateReport 纯组装，不落盘）。 */
+/** 预览页需要先于 emit 拿到 report 对象（generateReport 纯组装，不写文件）。 */
 export function draftOf(src: {
 	command: string;
 	input: InputInfo;

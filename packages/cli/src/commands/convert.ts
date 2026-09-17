@@ -28,7 +28,7 @@ import { draftOf, fileEntryOf, outputOf, readBytes } from './simplify.js';
 
 /**
  * meshify convert —— 格式互转（glb/gltf/obj/stl/ply；step 读入走 Tier1）。
- * OBJ→GLB 等价材质自动合并（坑 1 相关：材质不丢、冗余合并 + MATERIALS_MERGED 披露）。
+ * OBJ→GLB 等价材质自动合并（坑 1 相关：材质不丢、冗余合并 + MATERIALS_MERGED 警告）。
  */
 export function registerConvert(program: Command): void {
 	addCommonOptions(
@@ -134,7 +134,7 @@ export function registerConvert(program: Command): void {
 
 		// 输出统计：obj/stl/ply 读回后统计（转换保真，指标以实际产物为准）。
 		// 空场景例外：stl/ply 读取器把「0 面产物」按坏文件抛错，读回校验会把
-		// 合法的空转换误报成 exit 8——convert 是结构操作，空输入 → 合法空产物 + 披露
+		// 合法的空转换误报成 exit 8——convert 是结构操作，空输入 → 合法空产物 + 写警告
 		let afterLoaded: Awaited<ReturnType<typeof loadInput>> | null = null;
 		if (loaded.inputInfo.faces === 0) {
 			loaded.warnings.push(

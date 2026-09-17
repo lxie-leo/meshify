@@ -1,10 +1,12 @@
-"""五投影 UV 贴图（迁移自 maestro model_edit_texture.py）。
+"""五投影 UV 贴图：uv / planar / cylindrical / spherical / box。
 
-- uv / planar / cylindrical / spherical / box
-- 坑 2：色块图集 UV 检测 → ATLAS_UV_IGNORED + 盒式回退
-- 无 UV → AUTO_BOX_UV_GENERATED（盒式，文字可读）
-- 柱/球面帽面感知 + 接缝分裂（split_uv_seam）
-- metallic/roughness 覆盖（meshify 增）
+- uv：用模型自带的 UV（布局已经合理时，这是唯一无损的做法）
+- planar / cylindrical / spherical：按形状投影；柱面和球面是「绕一圈」的
+  投影，自动在接缝处拆顶点（split_uv_seam），顶盖/底盖区域改用平面投影
+- box：像展开纸箱一样分六面投影；没有 UV 时用它兜底，贴文字仍能看清
+- 坑 2：输入的 UV 是打包合并出的色块图集 → ATLAS_UV_IGNORED，改用盒式；
+  模型完全没有 UV → AUTO_BOX_UV_GENERATED
+- metallic/roughness 可直接指定数值（在贴图之外调材质参数）
 """
 
 from __future__ import annotations
@@ -83,7 +85,9 @@ def texture_file(
 
 
 # ------------------------------------------------------------------
-# UV 投影（maestro 原样迁移）
+# UV 投影：把三维顶点映射成 0~1 的二维贴图坐标。柱面/球面绕一圈会在
+# 首尾相接处断开，用 split_uv_seam 把缝两侧顶点拆开；顶盖/底盖改平面
+# 投影，避免挤在极点一片
 # ------------------------------------------------------------------
 
 

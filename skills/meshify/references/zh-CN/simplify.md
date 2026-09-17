@@ -23,12 +23,12 @@ meshify simplify <input> [--ratio 0.5] [--target-faces N] [--error 0.01]
 
 - **逐子网格处理（坑 1 防护）**：多材质模型各子网格独立简化、材质原样保留，绝不合并成白模
 - **Tier0**（meshoptimizer WASM）：`--error` 生效，manifest 带 `max_error_normalized`；
-  被简化的贴图网格披露 `UV_REMAP_APPROXIMATED`（塌缩区贴图从保留顶点子集采样）
+  被简化的贴图网格写 `UV_REMAP_APPROXIMATED` 警告（塌缩区贴图从保留顶点子集采样）
 - **Tier1**（pyfqmr）：`--aggressiveness` 生效；贴图网格不按位置焊接（保接缝双顶点），
   塌缩点 UV 按最近三角面重心插值重映射（同 `UV_REMAP_APPROXIMATED` 码）
-- **UV 接缝地板（双内核）**：带 UV 子网格的深度减面被 UV 岛接缝顶住——接缝顶点在索引空间
+- **UV 接缝造成的面数下限（双内核）**：带 UV 子网格的深度减面被 UV 岛接缝顶住——接缝顶点在索引空间
   被切开，等效于减面器无法跨坍缩的锁定边界，`--no-keep-border`/`--merge` 均绕不开。
-  带 UV 子网格实际面数远超请求目标时写 `UV_SEAM_DECIMATION_LIMITED` 披露；要压更低请先减面后贴图
+  带 UV 子网格实际面数远超请求目标时写 `UV_SEAM_DECIMATION_LIMITED` 警告；要压更低请先减面后贴图
 - 动画/蒙皮输入强制 Tier0（`SKIN_ANIMATION_PRESERVED`）
 
 ## 产物
@@ -41,7 +41,7 @@ meshify simplify <input> [--ratio 0.5] [--target-faces N] [--error 0.01]
 "metrics": { "face_reduction": 0.7, "ratio_actual": 0.3, "max_error_normalized": 0.004 }
 ```
 
-`ratio_actual` 是实际保留比（受 min-faces 跳过或 UV 接缝地板影响可能高于请求值——后者见
+`ratio_actual` 是实际保留比（受 min-faces 跳过或 UV 接缝下限影响可能高于请求值——后者见
 `UV_SEAM_DECIMATION_LIMITED`）。
 
 ## 建议
