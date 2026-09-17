@@ -25,6 +25,7 @@ meshify convert <input> --to <glb|gltf|obj|stl|ply>
 - 材质零丢失是硬约束（坑 1）；OBJ→GLB 等价材质合并时写 `MATERIALS_MERGED`
 - OBJ 的 `.mtl` 无法解析（或其中缺个别名字）时：每个 usemtl 名保留为独立的默认灰材质并写 `MTL_MISSING`（名字保留；颜色/贴图无从恢复）
 - STL/PLY 无材质语义：转出 GLB 时只有几何（贴图请走 texture 命令）
+- convert 放最后：simplify/segment/texture/lod/optimize 产物均为 GLB——材质/UV/动画的无损枢纽。整条链保持 GLB、最后转一次目标格式（中途过 stl/ply 会丢材质）
 - 动画/蒙皮在 Tier0 路线结构性保留；`--tier py` 则会被 trimesh 丢弃（路由层已强制拦截）
 - obj/stl/ply 产物统计以读回验证为准（`metrics` 反映实际文件，非内存估计）
 

@@ -52,7 +52,7 @@ Got a model
   │    ├─ Assembly to split → meshify segment --mode connected
   │    └─ Cut in half → meshify segment --mode plane --axis x
   ├─ Needs textures → meshify texture --map box --image tex.png   # texture LAST: UV seams cap later simplification
-  ├─ Needs another format → meshify convert --to stl|obj|ply|gltf
+  ├─ Needs another format → meshify convert --to stl|obj|ply|gltf   # convert LAST: geometry commands all output GLB (the lossless hub for materials/UV/animations); stl/ply are geometry-only
   ├─ Needs progressive loading → meshify lod --levels 3 --ratio 0.5
   └─ Web delivery in one step → meshify optimize --ratio 0.5 --texture-size 2048
 After each command: read report.json (or --json stdout) and check warnings and reduction metrics

@@ -28,6 +28,8 @@ extension must match `--to` (otherwise exit 4; this prevents STL bytes landing i
 - OBJ with an unresolvable `.mtl` (or names absent from it): each referenced usemtl name is kept as a
   distinct default gray material and `MTL_MISSING` is written (names survive; colors/textures do not)
 - STL/PLY have no material semantics: converting them to GLB yields geometry only (use the texture command for textures)
+- Convert last: simplify/segment/texture/lod/optimize all output GLB — the lossless hub for materials, UVs,
+  and animations. Keep the chain in GLB and convert once at the end (going through stl/ply mid-pipeline drops materials)
 - Animation/skinning is structurally preserved on the Tier0 route; `--tier py` drops it (trimesh
   pipeline; the routing layer intercepts this beforehand)
 - obj/stl/ply output stats are verified by reading the file back (`metrics` reflect the actual

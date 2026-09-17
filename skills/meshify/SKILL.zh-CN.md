@@ -41,7 +41,7 @@
   │    ├─ 装配体要拆 → meshify segment --mode connected
   │    └─ 要一刀两半 → meshify segment --mode plane --axis x
   ├─ 要上纹理 → meshify texture --map box --image tex.png   # 贴图放最后：UV 接缝会封死后续减面
-  ├─ 要换格式 → meshify convert --to stl|obj|ply|gltf
+  ├─ 要换格式 → meshify convert --to stl|obj|ply|gltf   # convert 放最后：几何命令产物均为 GLB（材质/UV/动画的无损枢纽）；stl/ply 仅几何
   ├─ 要分级加载 → meshify lod --levels 3 --ratio 0.5
   └─ 一步到位 Web 交付 → meshify optimize --ratio 0.5 --texture-size 2048
 每次命令后：读 report.json（或 --json stdout）核对 warnings 与削减指标
