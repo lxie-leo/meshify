@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
+import * as path from 'node:path';
 import type { Command } from 'commander';
-import type { LodLevelSummary } from '@meshify/core';
+import { warn, type LodLevelSummary } from '@meshify/core';
 import {
 	addCommonOptions,
 	assertProcessableGeometry,
@@ -88,6 +89,9 @@ export function registerLod(program: Command): void {
 			});
 			files.push(fileEntryOf(p, 'lod'));
 		}
+		// 级别数变少重跑（或 -o 换名）后，输出目录里可能残留上次的更高级别文件；
+		// manifest 只描述本次产物，残留文件不披露会误导 glob 收产物的下游
+		warnings.push(...staleLodWarnings(lodSummaries[0].path, levels));
 		progressDone(`LOD chain done: ${lodSummaries.map((l) => `L${l.level}:${l.faces}`).join(', ')}`);
 
 		const main = lodSummaries[0];
@@ -142,4 +146,34 @@ export function registerLod(program: Command): void {
 			{ reportPath: opts.report ?? om.reportPath('lod'), json: !!opts.json },
 		);
 	}));
+}
+
+/**
+ * 扫描输出目录里索引 ≥ levels 的同名 lod 文件（<stem>.lod<N>.glb），
+ * 命中即写 STALE_LOD_LEVELS（残留文件不动、不进 manifest.files，只披露）。
+ */
+function staleLodWarnings(lod0Path: string, levels: number) {
+	const dir = path.dirname(lod0Path);
+	const stem = path.basename(lod0Path, path.extname(lod0Path)).replace(/\.lod0$/, '');
+	const stale: string[] = [];
+	let names: string[];
+	try {
+		names = fs.readdirSync(dir);
+	} catch {
+		return [];
+	}
+	for (const name of names) {
+		const m = /^(.+)\.lod(\d+)\.glb$/.exec(name);
+		if (!m) continue;
+		if (m[1] !== stem) continue;
+		if (Number(m[2]) >= levels) stale.push(name);
+	}
+	if (stale.length === 0) return [];
+	return [
+		warn(
+			'STALE_LOD_LEVELS',
+			`Output directory contains ${stale.length} LOD file(s) beyond the current chain (level ≥ ${levels}): ${stale.sort().join(', ')}. ` +
+				`They are leftovers from a previous run with more levels; this manifest describes only the ${levels} file(s) written now. Delete them manually if unwanted.`,
+		),
+	];
 }

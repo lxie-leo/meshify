@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -100,6 +101,23 @@ def lod_file(
             warnings = warnings + result["warnings"]
         stage_input = out_path
 
+    # 级别数变少重跑后，目录里可能残留上次的更高级别 part 文件；
+    # manifest 只描述本次产物，残留不披露会误导 glob 收产物的下游
+    stale = sorted(
+        name
+        for name in os.listdir(output_dir)
+        if _part_level(name) is not None and _part_level(name) >= levels
+    )
+    if stale:
+        warnings.append(
+            warn(
+                "STALE_LOD_LEVELS",
+                f"Output directory contains {len(stale)} LOD file(s) beyond the current chain (level ≥ {levels}): "
+                f"{', '.join(stale)}. They are leftovers from a previous run with more levels; "
+                f"this manifest describes only the {levels} file(s) written now. Delete them manually if unwanted.",
+            )
+        )
+
     return {
         "parts": [
             {"path": lf["path"], "role": "lod", "index": i, "vertices": lf["vertices"], "faces": lf["faces"]}
@@ -127,3 +145,9 @@ def _load_any(path: str):
     from .. import mesh_utils as mu
 
     return mu.load_scene(path)
+
+
+def _part_level(name: str):
+    """part_%03d.glb → 级别号；不匹配命名约定返回 None。"""
+    m = re.fullmatch(r"part_(\d{3})\.glb", name)
+    return int(m.group(1)) if m else None

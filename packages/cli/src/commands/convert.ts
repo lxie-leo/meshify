@@ -36,8 +36,9 @@ export function registerConvert(program: Command): void {
 			.command('convert')
 			.description('Format conversion among glb/gltf/obj/stl/ply; STEP(STP) input requires Tier1 (--tier py, or auto when installed)')
 			.argument('<input>', 'input model (glb/gltf/obj/stl/ply/step/stp)')
-			.option('--to <format>', 'target format: glb | gltf | obj | stl | ply (required; the default GLB artifact is the most universal)')
-			.option('--up-axis <axis>', 'Up axis of the part in the STEP input: x|y|z (a leading - flips; default z = CAD convention) or auto (auto-detected from geometric features such as mounting holes; low confidence → exit 4 with candidates listed). Use it to upright parts authored lying down in the source file'),
+			.option('--to <format>', 'target format: glb | gltf | obj | stl | ply (default glb — geometry commands settle on GLB as the delivery format)')
+			.option('--up-axis <axis>', 'Up axis of the part in the STEP input: x|y|z (a leading - flips; default z = CAD convention) or auto (auto-detected from geometric features such as mounting holes; low confidence → exit 4 with candidates listed). Use it to upright parts authored lying down in the source file')
+			.option('--resolution <n>', 'STEP input: tessellation resolution (default 100; target edge length = bbox diagonal / n — lower = coarser and lighter)'),
 	).action(withFailureManifest('convert', (o) => `converted-${String(o.to ?? 'glb').toLowerCase()}`, async (input: string, cmdOpts: Record<string, unknown>) => {
 		const opts = cmdOpts as GlobalOptions & Record<string, unknown>;
 		const startedAt = Date.now();
@@ -80,6 +81,24 @@ export function registerConvert(program: Command): void {
 				);
 			}
 			params.up_axis = upAxis;
+		}
+		// --resolution 同为 STEP 专用（gmsh 网格化目标边长 = 包围盒对角线 / n）；
+		// 与 --up-axis 同口径：非 STEP 显式拒绝，不静默忽略
+		if (opts.resolution !== undefined) {
+			const resolution = Number(opts.resolution);
+			if (!Number.isInteger(resolution) || resolution < 1 || resolution > 100000) {
+				throw new MeshifyError(
+					EXIT_PARAM_CONFLICT,
+					`--resolution needs an integer in 1..100000, got: ${opts.resolution}`,
+				);
+			}
+			if (format !== 'step') {
+				throw new MeshifyError(
+					EXIT_PARAM_CONFLICT,
+					`--resolution only applies to STEP input (this input is ${format}; other formats are already meshes and are not re-tessellated)`,
+				);
+			}
+			params.resolution = resolution;
 		}
 
 		const op = `converted-${to}`;

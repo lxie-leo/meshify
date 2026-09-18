@@ -59,6 +59,8 @@ export const WARNING_CODES = [
 	'UP_AXIS_NORMALIZED',
 	/** --up-axis auto 高置信判定成功：写明判定的朝上轴与几何依据（低置信时 exit 4 拒绝并列候选） */
 	'UP_AXIS_AUTO',
+	/** LOD 链重跑级别数变少（或 -o 换名）后，输出目录里残留上次的更高级别文件；本次 manifest 只描述本次产物 */
+	'STALE_LOD_LEVELS',
 ] as const;
 
 export type WarningCode = (typeof WARNING_CODES)[number];

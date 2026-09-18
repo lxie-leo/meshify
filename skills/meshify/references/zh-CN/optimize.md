@@ -11,7 +11,7 @@ meshify optimize <input> [--ratio 0.5] [--error 0.01] [--compression meshopt]
 
 | 参数 | 默认 | 说明 |
 |---|---|---|
-| `--ratio <n>` | 不简化 | 传入才做简化（与 simplify 同参数语义） |
+| `--ratio <n>` | 不简化 | 传入才做简化；取值 [0.01,1]（比 simplify 窄——一键管线不做极端减面，要压更低先走 simplify） |
 | `--error <n>` | 0.01 | 简化误差上限 |
 | `--compression` | meshopt | `meshopt` / `draco` / `none`。draco 需可选依赖，缺失时跳过并 `DRACO_UNAVAILABLE` |
 | `--texture-format` | webp | `webp` / `jpeg` / `png` / `none`（不动贴图）。glTF 核心 GPU 上限 2048 的兼容性最好 |
@@ -21,10 +21,11 @@ meshify optimize <input> [--ratio 0.5] [--error 0.01] [--compression meshopt]
 ## 管线顺序（Tier0）
 
 ```
-去重(weld) → 修剪(prune) → [可选简化] → [贴图压缩/降采样] → meshopt|draco 几何压缩
+去重(dedup) + 修剪(prune) → [可选简化] → [贴图压缩/降采样] → meshopt|draco 几何压缩
 ```
 
-顺序遵循 gltf-transform 规范：weld 先行（合并索引提高压缩率），prune 收尾清孤立资源。
+第一步是 gltf-transform 的 `dedup()` + `prune()`（索引/属性 accessor 去重，再清孤立资源）——
+合并后的 accessor 在后续压缩里表现更好。
 
 ## Tier1（--tier py）边界
 

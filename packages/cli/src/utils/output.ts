@@ -108,11 +108,11 @@ export class OutputManager {
 	}
 
 	ensureDirFor(file: string): void {
-		fs.mkdirSync(path.dirname(path.resolve(file)), { recursive: true });
+		mkdirFriendly(path.dirname(path.resolve(file)));
 	}
 
 	ensureDir(dir: string): string {
-		fs.mkdirSync(path.resolve(dir), { recursive: true });
+		mkdirFriendly(path.resolve(dir));
 		return dir;
 	}
 }
@@ -120,4 +120,23 @@ export class OutputManager {
 /** 文件名去扩展名（多段后缀如 .tar.gz 不特殊处理，模型场景够用）。 */
 function parseName(p: string): string {
 	return path.basename(p, path.extname(p)) || 'model';
+}
+
+/**
+ * 建目录失败若因路径被普通文件占用（EEXIST/ENOTDIR），按参数冲突给友好提示，
+ * 不作为内部错误抛裸栈——这是用户可自行修复的环境问题。
+ */
+function mkdirFriendly(dir: string): void {
+	try {
+		fs.mkdirSync(dir, { recursive: true });
+	} catch (err) {
+		const code = (err as NodeJS.ErrnoException)?.code;
+		if (code === 'EEXIST' || code === 'ENOTDIR') {
+			throw new MeshifyError(
+				EXIT_PARAM_CONFLICT,
+				`Cannot create output directory ${dir}: the path (or a parent component) is occupied by a regular file. Remove or rename that file and retry.`,
+			);
+		}
+		throw err;
+	}
 }

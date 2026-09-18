@@ -11,7 +11,7 @@ meshify optimize <input> [--ratio 0.5] [--error 0.01] [--compression meshopt]
 
 | Parameter | Default | Notes |
 |---|---|---|
-| `--ratio <n>` | no simplification | Simplifies only when given (same semantics as simplify) |
+| `--ratio <n>` | no simplification | Simplifies only when given; range [0.01,1] (narrower than simplify — the one-command pipeline is not the place for extreme decimation) |
 | `--error <n>` | 0.01 | Simplification error bound |
 | `--compression` | meshopt | `meshopt` / `draco` / `none`. draco needs an optional dependency; when missing it is skipped with `DRACO_UNAVAILABLE` |
 | `--texture-format` | webp | `webp` / `jpeg` / `png` / `none` (leave textures alone). webp capped at the glTF core GPU limit of 2048 has the best compatibility |
@@ -21,11 +21,11 @@ meshify optimize <input> [--ratio 0.5] [--error 0.01] [--compression meshopt]
 ## Pipeline order (Tier0)
 
 ```
-weld → prune → [optional simplify] → [texture compression/downscaling] → meshopt|draco geometry compression
+dedup + prune → [optional simplify] → [texture compression/downscaling] → meshopt|draco geometry compression
 ```
 
-The order follows gltf-transform conventions: weld first (merged indices compress better), prune
-last to clear orphaned resources.
+The first step is gltf-transform `dedup()` + `prune()` (deduplicate index/attribute accessors, then
+clear orphaned resources) — merged accessors compress better downstream.
 
 ## Tier1 (--tier py) boundary
 

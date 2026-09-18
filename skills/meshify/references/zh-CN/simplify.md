@@ -11,11 +11,11 @@ meshify simplify <input> [--ratio 0.5] [--target-faces N] [--error 0.01]
 
 | 参数 | 默认 | 说明 |
 |---|---|---|
-| `--ratio <n>` | 0.5 | 保留面数比例 (0.01–1]。与 `--target-faces` 二选一 |
+| `--ratio <n>` | 0.5 | 保留面数比例 (0,1]。与 `--target-faces` 二选一 |
 | `--target-faces <n>` | — | 精确目标面数（各子网格按比例分摊）。与 `--ratio` **互斥**，同时给出报 exit 4 |
 | `--error <n>` | 0.01 | 误差上限（归一化 0–1），简化误差超过此值的面保留 |
 | `--min-faces <n>` | 200 | 小于该面数的子网格跳过简化（外观退化风险大于收益），写 `SMALL_MESH_SKIPPED` |
-| `--aggressiveness <n>` | 7 | QEM 激进程度 1–10，越大越保守（Tier1 pyfqmr 语义） |
+| `--aggressiveness <n>` | 7 | QEM 激进程度 1–20，越大越保守。仅 Tier1 生效（pyfqmr 语义；Tier0 下只回显进 params，不参与计算） |
 | `--no-keep-border` | 开 | 关闭边界保留（开口壳边界可能被折叠掏空——一般别关） |
 | `--merge` | 关 | 跨子网格合并简化（丢子网格边界，材质按多数保留） |
 

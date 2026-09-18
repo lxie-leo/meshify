@@ -268,6 +268,8 @@ type ModelCommandAction = (input: string, opts: GlobalOptions & Record<string, u
  * 任何报告——--json 的 Agent 只能拿退出码。本包装器在 rethrow 前尽力组装最小
  * manifest（输入结构未知 → 0 值兜底 + errors[] 携带原因）写盘，--json 时进 stdout。
  *
+ * - 预期外的裸 Error（如 fs 报错）同样兜底为 exit 8 的最小 manifest：
+ *   「非 0 退出也落 manifest」是全路径契约，不能只覆盖已识别错误
  * - Tier1 路径不抛 MeshifyError（kernel 返回后自管 manifest + exitCode），不会双重产出
  * - op 可为函数（convert 的 op 段含目标格式，在失败时也可从 opts 推出）
  * - 报告组装自身的失败静默吞掉：不掩盖原始错误
@@ -282,21 +284,26 @@ export function withFailureManifest(
 		try {
 			await action(input, opts);
 		} catch (err) {
-			if (err instanceof MeshifyError) {
-				try {
-					const report = failureReport(command, input, err, Date.now() - startedAt);
-					// op 可能从原始 opts 推出（convert 的 --to、segment 的 --mode），
-					// 此时值未经验证——净化后才能进报告文件名，防路径逃逸
-					const rawOp = typeof op === 'function' ? op(opts) : op;
-					const opName = rawOp.replace(/[^a-zA-Z0-9_-]/g, '') || 'unknown';
-					const om = new OutputManager(input, { overwrite: true, explicit: opts.output });
-					emitFailureReport(report, {
-						reportPath: opts.report ?? om.reportPath(opName),
-						json: !!opts.json,
-					});
-				} catch {
-					// 报告失败不掩盖原始错误
-				}
+			try {
+				const asMeshify =
+					err instanceof MeshifyError
+						? err
+						: new MeshifyError(
+								EXIT_INTERNAL,
+								err instanceof Error ? err.message : String(err),
+							);
+				const report = failureReport(command, input, asMeshify, Date.now() - startedAt);
+				// op 可能从原始 opts 推出（convert 的 --to、segment 的 --mode），
+				// 此时值未经验证——净化后才能进报告文件名，防路径逃逸
+				const rawOp = typeof op === 'function' ? op(opts) : op;
+				const opName = rawOp.replace(/[^a-zA-Z0-9_-]/g, '') || 'unknown';
+				const om = new OutputManager(input, { overwrite: true, explicit: opts.output });
+				emitFailureReport(report, {
+					reportPath: opts.report ?? om.reportPath(opName),
+					json: !!opts.json,
+				});
+			} catch {
+				// 报告失败不掩盖原始错误
 			}
 			throw err;
 		}

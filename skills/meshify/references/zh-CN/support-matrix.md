@@ -14,7 +14,7 @@
 | step/stp | T1 | T1 | T1 | T1 | T1 | T1 | T1 |
 | fbx/其他 | exit 3 | exit 3 | exit 3 | exit 3 | exit 3 | exit 3 | exit 3 |
 
-T0 = Tier0 默认；T1 = `--tier py` 显式可选；T1（必需）= 仅 Tier1。
+T0 = Tier0 默认；T1 = `--tier py` 显式可选（step/stp 行为实为仅 Tier1：auto 即路由 T1）。
 默认（auto）路由：动画输入→T0；STEP→T1；其余→T0。
 
 ## 已知边界

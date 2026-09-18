@@ -20,6 +20,15 @@ meshify convert <input> --to <glb|gltf|obj|stl|ply>
 - **Tier1**（step/stp 输入，或 `--tier py`）：STEP 经 OCC 网格化 → 颜色分组 → 目标格式
   （细节见 cad-step.md）
 
+## STEP 专用参数
+
+- `--resolution <n>`（默认 100）：网格化目标边长 = 包围盒对角线 / n。调低更粗更轻
+  （如 50 减半细化度），调高更细。非 STEP 输入带此参数直接拒绝（exit 4）——其他格式
+  已是网格、不再重新划分。inspect 同名参数同语义（分析统计用同一套网格化）。
+- `--up-axis x|y|z|-x|-y|-z|auto`（默认 z = CAD 惯例）：扶正在源文件里躺着建模的部件。
+  `auto` 按几何特征（安装孔簇等）自动判定；低置信（对称件）时 exit 4 列候选拒绝。
+  细节见 cad-step.md。
+
 ## 保真与警告
 
 - 材质零丢失是硬约束（坑 1）；OBJ→GLB 等价材质合并时写 `MATERIALS_MERGED`

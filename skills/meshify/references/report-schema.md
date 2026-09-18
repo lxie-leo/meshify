@@ -46,13 +46,13 @@ the two schema definitions are kept identical by contract tests.
 | `duration_ms` | all | duration (always present) |
 | `face_reduction` | commands that output faces | 1 - out_faces/in_faces (mathematical definition, **can be negative**: the output may have more faces than the input, e.g. geometry produced from a 0-face empty input, or faces introduced by capping/merging; judge by the sign, not the magnitude) |
 | `byte_reduction` | same as above | 1 - out_bytes/in_bytes (can be negative after binding textures) |
-| `ratio_actual` | simplify | fraction of faces actually kept (can exceed the request via min-faces skips or the UV seam floor, `UV_SEAM_DECIMATION_LIMITED`) |
+| `ratio_actual` | simplify / optimize (with --ratio) | fraction of faces actually kept (can exceed the request via min-faces skips or the UV seam floor, `UV_SEAM_DECIMATION_LIMITED`) |
 | `max_error_normalized` | Tier0 simplify | normalized geometric error upper bound (meshopt error semantics) |
 | `bytes_total` | multi-part/lod commands | summed bytes of every artifact file (delivery total; `output.bytes` covers only the file at `output.path`) |
 | `parts[]` | segment | `{index, path, vertices, faces}` per part |
 | `lod_levels[]` | lod | `{level, path, faces, vertices, bytes, ratio}` per level |
-| `derives_from` | derived artifacts | source file path |
-| `tier_note` | all | routing/execution note for this run (free text) |
+| `derives_from` | every manifest | source file path this run read |
+| `tier_note` | most commands | routing/execution note for this run (free text; presence varies — Tier0 fills it mainly for segment, Tier1 for most commands) |
 
 ## How to consume it (agent)
 

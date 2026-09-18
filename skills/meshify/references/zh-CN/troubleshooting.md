@@ -45,6 +45,7 @@
 | `PREVIEW_BEFORE_UNAVAILABLE` | Tier1 `--preview-html` | 原始输入非 glb/gltf（如 STEP）浏览器无法渲染，预览页仅产物侧单视窗；产物非 GLB 时整页跳过 |
 | `UP_AXIS_NORMALIZED` | Tier1 全几何命令（STEP 输入） | STEP 坐标按 CAD 惯例视为 Z-up，产物已旋转为 glTF 规范 Y-up（几何形状不变，仅朝向规范化）。若部件在源文件里躺着建模（真实朝上轴非 Z），convert 时用 `--up-axis x\|-y` 等指定扶正 |
 | `UP_AXIS_AUTO` | convert `--up-axis auto` | 高置信自动判定成功：写明判定的朝上轴与几何依据（安装孔簇位置/数量），`params.up_axis_resolved` 为机器可读结论。低置信（对称件/无孔）时 exit 4 拒绝并列候选 |
+| `STALE_LOD_LEVELS` | lod 级别数变少重跑 | 输出目录里有超出本次链长的 LOD 文件（上次更高级别运行的残留）；manifest 只描述本次写入的文件，不需要就手动删残留 |
 
 ## 常见故障
 
@@ -66,7 +67,12 @@
 
 **非 0 退出码也想拿 manifest**：早失败（输入不可读/参数冲突等）也会落最小 manifest
 （`params.failed_early=true`、`errors[]` 携带原因、`input.vertices/faces` 为 0 兜底）——
-`--json` 时 stdout 同样输出。
+`--json` 时 stdout 同样输出。唯一例外：命令行解析层错误（未知选项/未知命令/缺参数）
+只打 stderr 并 exit 4，不落 manifest。
+
+**Windows 下路径带 `&`/`%`/`^` 报找不到文件**：`bin\meshify.cmd` 启动器经 cmd.exe 转发，
+不带引号的 `&` 会被当成命令分隔符——整个路径加引号（`meshify inspect "a&b(c).glb"`）。
+直调 Node（`node packages/cli/bin/meshify.js`）与 POSIX shell 不受影响。
 
 ## 性能参考
 

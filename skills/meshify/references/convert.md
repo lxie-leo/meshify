@@ -22,6 +22,16 @@ extension must match `--to` (otherwise exit 4; this prevents STL bytes landing i
 - **Tier1** (step/stp input, or `--tier py`): STEP → OCC meshing → color grouping → target format
   (details in cad-step.md)
 
+## STEP-only options
+
+- `--resolution <n>` (default 100): tessellation target edge length = bbox diagonal / n. Lower =
+  coarser and lighter (e.g. 50 halves the refinement); higher = finer. Non-STEP input with this
+  flag is refused (exit 4) — other formats are already meshes and are not re-tessellated. The same
+  flag exists on inspect (analysis statistics use the same meshing).
+- `--up-axis x|y|z|-x|-y|-z|auto` (default z = CAD convention): uprights parts authored lying down
+  in the source file. `auto` detects from geometric features (mounting-hole clusters etc.);
+  low confidence (symmetric parts) → exit 4 with candidates listed. See cad-step.md for details.
+
 ## Fidelity and disclosure
 
 - Zero material loss is a hard constraint (pitfall 1); merging equivalent materials on OBJ→GLB writes `MATERIALS_MERGED`

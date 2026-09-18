@@ -23,7 +23,7 @@
 | simplify | QEM 减面（逐子网格保材质） | ✅ | ✅ | `--ratio 0.5`、`--target-faces`、`--min-faces` |
 | segment | 拆件：connected/plane/semantic | ✅ | ✅ | `--mode`、`--axis x --position 0.5`、`--no-cap` |
 | texture | 五投影 UV + 贴图绑定 | ✅ | ✅ | `--map box`、`--image`、`--metallic/--roughness` |
-| convert | glb/gltf/obj/stl/ply 互转 | ✅ | ✅（STEP 读入） | `--to glb`、`--up-axis x\|auto`（STEP 躺着建模时扶正/自动判定） |
+| convert | glb/gltf/obj/stl/ply 互转 | ✅ | ✅（STEP 读入） | `--to glb`、`--up-axis x\|auto`（STEP 躺着建模时扶正/自动判定）、`--resolution`（STEP 网格化粗细） |
 | lod | 多级 LOD链 | ✅ | ✅ | `--levels 3 --ratio 0.5` |
 | optimize | Web 交付一键优化（meshopt+WebP） | ✅ | ⚠️ 无压缩基线 | `--ratio`、`--texture-size` |
 | doctor | 环境自检 + 安装引导 | ✅ | 检测 | `--json`、`--install-uv` |
@@ -96,9 +96,11 @@ meshify convert part.step --to glb --up-axis auto --preview-html
 meshify doctor
 ```
 
-通用选项（全部命令）：`-o <path>` 显式输出路径、`--json` manifest 到 stdout、`--overwrite`、
-`--tier auto|ts|py`、`--force` 超限一次性处理。`--preview-html` 见决策树后的默认策略——
-产物命令默认带上（省略即关闭）。
+通用选项（模型命令 simplify/segment/texture/convert/lod/optimize）：`-o <path>` 显式输出路径、
+`--json` manifest 到 stdout、`--overwrite`、`--tier auto|ts|py`、`--force` 超限一次性处理。
+`--preview-html` 见决策树后的默认策略——产物命令默认带上（省略即关闭）。
+例外：`inspect` 有 `--report/--tier/--preview-html/--json/--force` 但没有 `-o`（不写产物）；
+`doctor` 只有 `--json` 和 `--install-uv`。
 
 ## 报告解读（meshify.report/v1）
 
@@ -128,6 +130,7 @@ meshify doctor
 **失败路径同样产出 manifest**：非 0 退出码（输入不可读/参数冲突/空场景等早失败）时也会落
 最小 manifest（`errors[]` 带原因、`params.failed_early: true`、输入统计 0 值兜底），
 `--json` 下 stdout 协议不变——统一「先解析 stdout manifest，失败看 errors + exit_code」。
+唯一例外：命令行解析层错误（未知选项/未知命令/缺参数）只打 stderr 并 exit 4，不落 manifest。
 字段细节见 references/zh-CN/report-schema.md。
 
 ## 退出码协议（Agent 按码决策）

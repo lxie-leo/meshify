@@ -11,11 +11,11 @@ meshify simplify <input> [--ratio 0.5] [--target-faces N] [--error 0.01]
 
 | Parameter | Default | Notes |
 |---|---|---|
-| `--ratio <n>` | 0.5 | Fraction of faces to keep, (0.01–1]. Mutually exclusive with `--target-faces` |
+| `--ratio <n>` | 0.5 | Fraction of faces to keep, (0,1]. Mutually exclusive with `--target-faces` |
 | `--target-faces <n>` | — | Exact target face count (distributed proportionally across submeshes). Mutually exclusive with `--ratio`; passing both is exit 4 |
 | `--error <n>` | 0.01 | Error bound (normalized 0–1); faces whose simplification error exceeds it are kept |
 | `--min-faces <n>` | 200 | Submeshes below this face count are skipped (degradation risk outweighs the gain), writes `SMALL_MESH_SKIPPED` |
-| `--aggressiveness <n>` | 7 | QEM aggressiveness 1–10; higher is more conservative (Tier1 pyfqmr semantics) |
+| `--aggressiveness <n>` | 7 | QEM aggressiveness 1–20; higher is more conservative. Tier1-only parameter (pyfqmr semantics; echoed in params on Tier0, unused there) |
 | `--no-keep-border` | on | Disables border preservation (borders of open shells can collapse into holes — usually leave this on) |
 | `--merge` | off | Simplify across submeshes (drops submesh boundaries; majority material kept) |
 

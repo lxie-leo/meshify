@@ -305,7 +305,14 @@ def _cmd_convert(input_path, params, output_path, output_dir, overwrite):
     from .services import convert as svc
 
     to = str(params.get("to", "glb"))
-    result = svc.convert_file(input_path, output_path, to=to, up_axis=str(params.get("up_axis", "z")), overwrite=overwrite)
+    result = svc.convert_file(
+        input_path,
+        output_path,
+        to=to,
+        resolution=int(params.get("resolution", 100)),
+        up_axis=str(params.get("up_axis", "z")),
+        overwrite=overwrite,
+    )
     files = [_file_info(output_path, "asset")]
     output = _single_output(output_path, to, result["vertices"], result["faces"], files)
     extra = {k: result[k] for k in ("up_axis_resolved", "up_axis_evidence") if k in result}

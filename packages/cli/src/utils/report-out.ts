@@ -53,10 +53,15 @@ function writeReportFile(p: string, report: MeshifyReport): void {
 /**
  * 早失败路径也要写出最小 manifest：不做摘要打印（没有成功产物可说），
  * 仅写报告文件 + --json 时 stdout 输出，让 Agent 在非 0 退出码下也能拿到
- * 结构化错误（errors[] 携带原因）。组装失败静默——不掩盖原始错误。
+ * 结构化错误（errors[] 携带原因）。报告文件写失败（如路径被占）不能连带
+ * 丢掉 stdout——那是 Agent 唯一的兜底通道。
  */
 export function emitFailureReport(report: MeshifyReport, opts: EmitOptions): void {
-	writeReportFile(opts.reportPath, report);
+	try {
+		writeReportFile(opts.reportPath, report);
+	} catch {
+		// 报告文件写不进（如报告路径被普通文件/目录占用）：尽力只保 stdout
+	}
 	if (opts.json) {
 		process.stdout.write(JSON.stringify(report, null, 2) + '\n');
 	}

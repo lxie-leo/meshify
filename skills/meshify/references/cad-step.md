@@ -31,9 +31,9 @@ meshify inspect part.step          # statistics only, no artifact written
 meshify simplify part.step --ratio 0.3     # convert then simplify (or do it in two steps for more control)
 ```
 
-- **Meshing precision**: target edge length = bbox diagonal / resolution (default 100). For finer
-  or coarser output, run `convert` first with the `resolution` parameter (same on inspect), then
-  process the result
+- **Meshing precision**: `convert --resolution <n>` (default 100); target edge length = bbox
+  diagonal / n. For finer or coarser output, run `convert` first with `--resolution` (same flag on
+  inspect), then process the result
 - **Color grouping** (styled_item, AP203/AP214): parts are grouped by CAD color, each group becomes
   an independent PBR submesh; files without colors fall back to a light matte gray
   (metallic 0 / roughness 0.8, avoiding a bare white model)
@@ -94,6 +94,6 @@ meshify optimize part.converted-glb.glb --texture-size 1024   # one more layer o
 |---|---|
 | `exit 5` | Tier1 not installed/synced — follow the install steps above; `meshify doctor` shows which check FAILs |
 | `STEP file produced no triangles` | File contains only wireframes/points, or is corrupt; confirm it holds solids in CAD software |
-| Face count explodes | OCC surface refinement; lower the resolution parameter (e.g. 50) |
+| Face count explodes | OCC surface refinement; lower `--resolution` (e.g. 50) |
 | Colors lost | The source file has no styled_item colors at all; add materials afterwards with the texture command |
 | Two-tone solid comes out single-color after splitting | Tier1 plane cut takes the solid's majority color (keeps the cross-section watertight); connected keeps all colors |

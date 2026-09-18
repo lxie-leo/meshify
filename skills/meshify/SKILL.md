@@ -33,7 +33,7 @@ that choice only affects what you read, not what you say to the user.
 | simplify | QEM decimation (per-submesh, materials kept) | ✅ | ✅ | `--ratio 0.5`, `--target-faces`, `--min-faces` |
 | segment | Split: connected/plane/semantic | ✅ | ✅ | `--mode`, `--axis x --position 0.5`, `--no-cap` |
 | texture | Five UV projections + texture binding | ✅ | ✅ | `--map box`, `--image`, `--metallic/--roughness` |
-| convert | glb/gltf/obj/stl/ply interconversion | ✅ | ✅ (reads STEP) | `--to glb`, `--up-axis x\|auto` (upright models authored lying down / auto-detect) |
+| convert | glb/gltf/obj/stl/ply interconversion | ✅ | ✅ (reads STEP) | `--to glb`, `--up-axis x\|auto` (upright models authored lying down / auto-detect), `--resolution` (STEP tessellation density) |
 | lod | Multi-level LOD chain | ✅ | ✅ | `--levels 3 --ratio 0.5` |
 | optimize | One-command web delivery (meshopt+WebP) | ✅ | ⚠️ uncompressed baseline | `--ratio`, `--texture-size` |
 | doctor | Environment check + install guidance | ✅ | detects | `--json`, `--install-uv` |
@@ -111,9 +111,11 @@ meshify convert part.step --to glb --up-axis auto --preview-html
 meshify doctor
 ```
 
-Global options (all commands): `-o <path>` explicit output path, `--json` manifest to stdout,
-`--overwrite`, `--tier auto|ts|py`, `--force` to process an oversize input once. `--preview-html`
-follows the default policy above: artifact commands include it unless the flag is omitted.
+Global options (model commands simplify/segment/texture/convert/lod/optimize): `-o <path>` explicit
+output path, `--json` manifest to stdout, `--overwrite`, `--tier auto|ts|py`, `--force` to process an
+oversize input once. `--preview-html` follows the default policy above: artifact commands include it
+unless the flag is omitted. Exceptions: `inspect` takes `--report/--tier/--preview-html/--json/--force`
+but no `-o` (it writes no artifact); `doctor` takes only `--json` and `--install-uv`.
 
 ## Reading the report (meshify.report/v1)
 
@@ -146,7 +148,9 @@ references/troubleshooting.md.
 **Failed runs also produce a manifest**: non-zero exits (unreadable input, parameter conflicts,
 empty scene, and other early failures) still write a minimal manifest (`errors[]` with the reason,
 `params.failed_early: true`, input stats zeroed as a fallback), and the `--json` stdout contract is
-unchanged. Always "parse the stdout manifest first; on failure read errors + exit_code".
+unchanged. Always "parse the stdout manifest first; on failure read errors + exit_code". The only
+exception is command-line parse errors (unknown option/command, missing argument): these print to
+stderr and exit 4 without a manifest.
 Field-level detail in references/report-schema.md.
 
 ## Exit codes (decide by code)

@@ -45,6 +45,7 @@
 | `PREVIEW_BEFORE_UNAVAILABLE` | Tier1 `--preview-html` | Original input is not glb/gltf (e.g. STEP) and can't render in a browser; the preview page shows the artifact side only (single viewport); non-GLB artifacts skip the page entirely |
 | `UP_AXIS_NORMALIZED` | Tier1 geometry commands (STEP input) | STEP coordinates treated as Z-up per CAD convention; output rotated to the glTF-required Y-up (shape unchanged, orientation normalized only). If the part was authored lying down (real up axis not Z), pass `--up-axis x\|-y` etc. at convert time to upright it |
 | `UP_AXIS_AUTO` | convert `--up-axis auto` | High-confidence auto-detection succeeded: discloses the detected up axis and its geometric evidence (mounting-hole cluster position/count); `params.up_axis_resolved` is the machine-readable verdict. Low confidence (symmetric parts / no holes) → exit 4 with candidates listed |
+| `STALE_LOD_LEVELS` | lod rerun with fewer levels | The output directory contains LOD files beyond the current chain (leftovers from a previous run with more levels); the manifest describes only the files written this run. Delete the leftovers manually if unwanted |
 
 ## Common failures
 
@@ -72,6 +73,13 @@ grazes the bbox surface; use inspect's bbox to compute native coordinates and go
 **Wanting the manifest even on non-zero exits**: early failures (unreadable input, parameter
 conflict, ...) also write a minimal manifest (`params.failed_early=true`, `errors[]` carries the
 reason, `input.vertices/faces` zeroed as a fallback) — `--json` outputs it to stdout as usual.
+Command-line parse errors (unknown option/command, missing argument) are the one exception: stderr
+text + exit 4, no manifest.
+
+**A path with `&`/`%`/`^` breaks on Windows**: the `bin\meshify.cmd` launcher goes through cmd.exe,
+which treats unquoted `&` as a command separator — quote the whole path
+(`meshify inspect "a&b(c).glb"`). Direct Node invocation (`node packages/cli/bin/meshify.js`) and
+POSIX shells are unaffected.
 
 ## Performance reference
 

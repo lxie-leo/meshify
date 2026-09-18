@@ -29,8 +29,8 @@ meshify inspect part.step          # 只看统计，不落产物
 meshify simplify part.step --ratio 0.3     # 先转后减面（或分两步更可控）
 ```
 
-- **网格化精度**：目标边长 = 包围盒对角线 / resolution（默认 100）。
-  想更精细/更粗糙，先 `convert`（或 inspect 参数 `resolution`）再后续处理
+- **网格化精度**：`convert --resolution <n>`（默认 100）；目标边长 = 包围盒对角线 / n。
+  想更精细/更粗糙，先带 `--resolution` 转 GLB（inspect 同名参数同语义）再后续处理
 - **颜色分组**（styled_item AP203/AP214）：按 CAD 颜色分组，每组独立 PBR 子网格；
   无颜色回退浅灰哑光（metallic 0 / roughness 0.8，避免裸白）
 - 颜色挂在体上未下传到面的文件：回退取所属体颜色（gmsh adjacencies）
@@ -77,6 +77,6 @@ meshify optimize part.converted-glb.glb --texture-size 1024   # 再压一层体�
 |---|---|
 | `exit 5` | Tier1 未装/未同步——按上面安装步骤；`meshify doctor` 看哪项 FAIL |
 | `STEP 文件未生成任何三角面` | 文件只含线框/点，或损坏；在 CAD 软件里确认含实体 |
-| 面数爆炸 | OCC 曲面加密；减小 resolution 参数（如 50） |
+| 面数爆炸 | OCC 曲面加密；调低 `--resolution`（如 50） |
 | 颜色丢失 | 源文件本身无 styled_item 颜色；转出后用 texture 命令补材质 |
 | 双色实体拆件后单色 | Tier1 plane 切割取实体多数色（换截面水密）；connected 拆件颜色全保留 |
